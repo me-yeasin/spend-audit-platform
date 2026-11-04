@@ -42,3 +42,8 @@ next-env.d.ts
 
 # design verification artifacts (regenerate with design/shoot.mjs)
 /design/shots/
+__pycache__/
+
+# bulky generated test fixtures (regenerate with test-data/generate.mjs)
+/test-data/large-statement.csv
+/test-data/oversized-statement.csv

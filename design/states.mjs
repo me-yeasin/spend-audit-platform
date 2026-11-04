@@ -116,11 +116,11 @@ const overflow = (page) =>
   await shot(page, "upload-reading");
 
   await page.waitForFunction(
-    () => document.querySelector("[data-upload-card]")?.dataset.state === "ready",
+    () => Boolean(document.querySelector("[data-file-chip]")),
     { timeout: 15000 },
   );
   await new Promise((r) => setTimeout(r, 250));
-  console.log("ready state:", await state(page));
+  console.log("imported state: workspace chip visible");
   await shot(page, "upload-ready");
 
   await page.close();
@@ -152,7 +152,7 @@ const overflow = (page) =>
   await page.reload({ waitUntil: "networkidle0" });
   await dropFile(page, { name: "october-statement.csv", type: "text/csv", content: csv(128) });
   await page.waitForFunction(
-    () => document.querySelector("[data-upload-card]")?.dataset.state === "ready",
+    () => Boolean(document.querySelector("[data-file-chip]")),
     { timeout: 15000 },
   );
   await new Promise((r) => setTimeout(r, 250));

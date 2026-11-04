@@ -63,6 +63,16 @@ To keep the application focused and useful, the following are intentionally excl
 - No backend or database.
 - No AI features in the first version. AI can be added later as an optional extra.
 ---
+## Build progress
+1. **File upload** — done.
+2. **Transaction list** — done. Rows are grouped by month, newest first, with a sticky column header, a pinned range in the footer, and a two-line row layout on mobile. The parser handles quoted fields, currency symbols, separate debit/credit columns and several date formats; unreadable files say exactly which columns are missing.
+3. **Recurring charge detection** — next.
+4. **Owner flagging**
+5. **Total monthly recurring cost**
+6. **No owner list**
+7. **Monthly re-run**
+8. **Clean, simple interface** — applied throughout, refined as each feature lands.
+---
 ## Build order
 We build the features in this order:
 1. **File upload** — get a CSV into the application.
