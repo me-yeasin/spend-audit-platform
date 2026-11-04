@@ -37,6 +37,14 @@ for (const s of shots) {
   await new Promise((r) => setTimeout(r, 250));
   const path = new URL(`${s.name}.png`, outDir).pathname.replace(/^\//, "");
   await page.screenshot({ path: decodeURIComponent(path) });
+  const fullPath = new URL(`${s.name}-full.png`, outDir).pathname.replace(
+    /^\//,
+    "",
+  );
+  await page.screenshot({
+    path: decodeURIComponent(fullPath),
+    fullPage: true,
+  });
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );

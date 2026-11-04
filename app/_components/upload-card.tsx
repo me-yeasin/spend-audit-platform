@@ -401,9 +401,14 @@ export default function UploadCard() {
               : ""}
       </p>
 
-      <p className="mt-6 flex items-center justify-center gap-2 px-2 text-center text-[12px] text-muted sm:mt-7 sm:text-[12.5px]">
-        <LockIcon className="shrink-0 text-accent" />
-        <span>Your file stays on this device — nothing is uploaded.</span>
+      <p className="mt-6 flex items-start justify-center gap-2 px-2 text-center text-[12px] text-muted sm:mt-7 sm:text-[12.5px]">
+        <LockIcon className="mt-[3px] shrink-0 text-accent" />
+        <span>
+          <span className="sm:hidden">Stays on this device — never uploaded.</span>
+          <span className="hidden sm:inline">
+            Your file stays on this device — nothing is uploaded.
+          </span>
+        </span>
       </p>
     </div>
   );

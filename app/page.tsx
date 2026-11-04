@@ -1,5 +1,8 @@
 import Link from "next/link";
 import UploadCard from "./_components/upload-card";
+import HowItWorks from "./_components/how-it-works";
+import ResultPreview from "./_components/result-preview";
+import SiteFooter from "./_components/site-footer";
 import { LockIcon } from "./_components/icons";
 
 function Wordmark() {
@@ -36,7 +39,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col items-center px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-24 lg:pt-[88px]">
+      <main className="flex flex-1 flex-col items-center px-5 pt-14 pb-16 sm:px-8 sm:pt-20 sm:pb-20 lg:pt-[88px]">
         {/* ------------------------------------------------------------ hero */}
         <section className="w-full max-w-[820px] text-center">
           <p className="inline-flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-[11px] sm:tracking-[0.22em]">
@@ -58,7 +61,19 @@ export default function Home() {
         <section className="mt-10 w-full sm:mt-12" aria-label="Import a statement">
           <UploadCard />
         </section>
+
+        {/* --------------------------------------------------- how it works */}
+        <div className="mt-16 w-full sm:mt-[72px]">
+          <HowItWorks />
+        </div>
+
+        {/* ------------------------------------------------- result preview */}
+        <div className="mt-16 w-full sm:mt-24">
+          <ResultPreview />
+        </div>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }
