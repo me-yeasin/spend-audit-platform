@@ -1,34 +1,6 @@
 import Link from "next/link";
-
-function LockIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect
-        x="2.1"
-        y="5.1"
-        width="7.8"
-        height="6.2"
-        rx="1.6"
-        stroke="currentColor"
-        strokeWidth="1.1"
-      />
-      <path
-        d="M4 5.1V3.9a2 2 0 1 1 4 0v1.2"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+import UploadCard from "./_components/upload-card";
+import { LockIcon } from "./_components/icons";
 
 function Wordmark() {
   return (
@@ -64,8 +36,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ------------------------------------------------------------- hero */}
       <main className="flex flex-1 flex-col items-center px-5 pt-14 pb-20 sm:px-8 sm:pt-20 sm:pb-24 lg:pt-[88px]">
+        {/* ------------------------------------------------------------ hero */}
         <section className="w-full max-w-[820px] text-center">
           <p className="inline-flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.2em] text-muted sm:text-[11px] sm:tracking-[0.22em]">
             <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
@@ -80,6 +52,11 @@ export default function Home() {
             Drop in your bank statement CSV. We surface every recurring charge,
             total it up, and flag the ones nobody owns.
           </p>
+        </section>
+
+        {/* ---------------------------------------------------- upload card */}
+        <section className="mt-10 w-full sm:mt-12" aria-label="Import a statement">
+          <UploadCard />
         </section>
       </main>
     </div>
