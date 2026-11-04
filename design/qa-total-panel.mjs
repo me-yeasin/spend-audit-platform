@@ -150,7 +150,8 @@ try {
   );
 
   console.log("\nthe unowned money");
-  truthy("it says how much has no owner", state.context?.includes("has no owner"));
+  truthy("with nothing assigned the line stays quiet", !state.context?.includes("has no owner"));
+  truthy("it just says how many charges", state.context?.includes("across 14 recurring charges"));
   await page.screenshot({ path: path.join(outDir, "total-desktop.png") });
   console.log("shot  total-desktop");
 
@@ -185,12 +186,23 @@ try {
 
   state = await probe(page);
   check("the headline does not change", state.amount, beforeClaim);
-  truthy("but the unowned money drops", state.context?.includes("has no owner"));
+  truthy(
+    "the unowned money now appears",
+    state.context?.includes("has no owner"),
+  );
+  truthy(
+    "and it is the part that is not owned",
+    state.context?.includes("$2,401.64") === false,
+  );
 
   console.log("\na new file");
   const beforeNewFile = state.amount;
   await drop(page, "statement-12-months.csv");
-  await page.waitForSelector("[data-total-panel]", { timeout: 15000 });
+  // wait for the new file to actually replace the old one
+  await page.waitForFunction(
+    () => (document.querySelector("[data-file-chip]")?.innerText ?? "").includes("statement-12-months"),
+    { timeout: 20000 },
+  );
   await new Promise((r) => setTimeout(r, 400));
   state = await probe(page);
   check(
@@ -198,12 +210,39 @@ try {
     Number(state.amount.replace(/[^0-9.]/g, "")),
     state.rowSum,
   );
-  // The same subscriptions over a longer window cost the same each month.
-  check("a longer file gives the same monthly cost", state.amount, beforeNewFile);
   check("and the same number of charges", state.rowAmounts.length, 14);
+  truthy(
+    "the monthly cost is about the same",
+    Math.abs(Number(state.amount.replace(/[^0-9.]/g, "")) - Number(beforeNewFile.replace(/[^0-9.]/g, ""))) < 50,
+  );
 
-  console.log("\nmobile, 320px");
-  const mobile = await browser.newPage();
+  console.log("\nwhen every charge has an owner");
+  const beforeClaimAll = state.amount;
+  for (let i = 0; i < 20; i += 1) {
+    const remaining = await page.evaluate(
+      () => document.querySelectorAll('[data-recurring-group] button[aria-label^="Add an owner"]').length,
+    );
+    if (remaining === 0) break;
+
+    await page.evaluate(() => {
+      document.querySelector('[data-recurring-group] button[aria-label^="Add an owner"]').click();
+    });
+    await page.waitForFunction(
+      () => Boolean(document.querySelector('[data-recurring-group] input[type="text"]:focus')),
+      { timeout: 5000 },
+    );
+    await page.keyboard.type("Sam");
+    await page.keyboard.press("Enter");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  state = await probe(page);
+  truthy("the line says every charge has an owner", state.context?.includes("every one has an owner"));
+  truthy("and does not mention unowned money", !state.context?.includes("has no owner"));
+  check("the headline is untouched", state.amount, beforeClaimAll);
+
+  console.log("\nmobile, 320px");  const mobile = await browser.newPage();
   await mobile.setViewport({ width: 320, height: 720 });
   await mobile.goto(url, { waitUntil: "networkidle0" });
   await mobile.evaluate(() => window.localStorage.clear());

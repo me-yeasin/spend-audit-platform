@@ -56,12 +56,18 @@ export default function TotalPanel({ total }: TotalPanelProps) {
 
               <p className="mt-2.5 text-[12px] text-subtle">
                 across {total.charges} recurring {total.charges === 1 ? "charge" : "charges"}
-                {total.unownedCharges > 0 && (
+                {total.unownedCharges > 0 && total.unownedCharges < total.charges && (
                   <>
                     {" · "}
                     <span className="text-flag">
                       {formatCost(total.unownedMonthly)} per month has no owner
                     </span>
+                  </>
+                )}
+                {total.unownedCharges === 0 && (
+                  <>
+                    {" · "}
+                    <span className="text-ink-soft">every one has an owner</span>
                   </>
                 )}
               </p>
