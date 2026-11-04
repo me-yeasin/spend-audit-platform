@@ -46,11 +46,9 @@ export default function RecurringPanel({
       aria-labelledby="recurring-heading"
       data-recurring-panel
     >
-      <div role="status" aria-live="polite" className="sr-only">
-        {groups.length === 0
-          ? "No recurring charges found."
-          : `${groups.length} recurring charges found.`}
-      </div>
+      {/* No live region here on purpose: the headline total already
+          announces how many charges there are, and a second announcement
+          saying the same thing is noise for a screen reader. */}
 
       <div className="rounded-[20px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(18,18,15,0.04),0_18px_44px_-30px_rgba(18,18,15,0.28)]">
         <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6 sm:py-5">

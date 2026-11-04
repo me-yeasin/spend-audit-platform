@@ -154,6 +154,22 @@ try {
   await page.screenshot({ path: path.join(outDir, "total-desktop.png") });
   console.log("shot  total-desktop");
 
+  console.log("\nwhat a screen reader is told");
+  const live = await page.evaluate(() =>
+    [...document.querySelectorAll("[aria-live]")].map((el) =>
+      (el.textContent ?? "").replace(/\s+/g, " ").trim(),
+    ),
+  );
+  check("there are three announcements", live.length, 3);
+  truthy("one says how many transactions were loaded", live.some((t) => t.includes("transactions loaded")));
+  truthy("one says what it costs per month", live.some((t) => t.includes("per month")));
+  truthy("one says what needs an owner", live.some((t) => t.includes("need an owner")));
+  check("nothing is announced twice", new Set(live).size, live.length);
+  truthy(
+    "the total is announced with its amount",
+    live.some((t) => t.includes(state.amount)),
+  );
+
   console.log("\nclaiming a charge");
   const beforeClaim = state.amount;
   await page.evaluate(() => {
