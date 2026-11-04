@@ -119,7 +119,7 @@ $2,401.64  per month
 across 14 recurring charges
 ```
 
-With unclaimed money (only rendered when at least one charge has no owner):
+With unclaimed money:
 
 ```
 Total monthly recurring cost
@@ -132,12 +132,33 @@ The separator is `·` (middle dot, U+00B7) with a space either side.
 Singular: with one charge the count reads `across 1 recurring charge` and the
 live-region sentence reads `across 1 recurring charge`.
 
+**The unclaimed clause only appears when it tells the user something.** It is
+rendered when *some* charges have an owner and some do not — that is, when
+the figure is a meaningful part of the total rather than the whole of it.
+
+It is deliberately **not** shown in the starting state, where nothing has been
+assigned yet. There the line would read
+
+```
+across 14 recurring charges · $2,401.64 per month has no owner
+```
+
+which prints the headline figure twice in a row and reads like a mistake
+rather than a finding. Before the user has named anybody, "everything is
+unowned" is not a discovery — it is the state of an untouched list, and the
+"Needs an owner" section directly below already says so, item by item. The
+clause earns its place the moment claiming starts: it then reports the part
+of the bill that nobody has taken responsibility for, which is the number the
+user is actually looking for.
+
 ### 4.2 Every charge has an owner
 
 The `· $451.15 per month has no owner` clause disappears entirely. The line ends
 at `across 14 recurring charges`. Nothing replaces it — there is no "all
 claimed" badge, no tick, no green. Green is reserved for income, and the
-absence of a flag is not a thing that needs celebrating.
+absence of a flag is not a thing that needs celebrating. The disappearance of
+the whole "Needs an owner" section is itself the confirmation that there is
+nothing left to do.
 
 ### 4.3 No recurring charges
 
@@ -182,7 +203,7 @@ For reference, the exact strings, with the separator marked:
 | Unit | `per month` |
 | Context | `across 14 recurring charges` |
 | Separator | `·` |
-| Unclaimed | `$451.15 per month has no owner` |
+| Unclaimed | `$451.15 per month has no owner` — only when some charges are owned and some are not |
 | Empty heading | `No recurring charges found` |
 | Empty body | `Nothing repeats in this statement yet, so there is nothing to total.` |
 | Footer left | `14 recurring charges grouped from 62 transactions` |
@@ -367,9 +388,16 @@ would delay the live-region announcement.
 | Situation | What the card shows |
 | --- | --- |
 | No recurring charges found | `No recurring charges found` + `Nothing repeats in this statement yet, so there is nothing to total.` |
+| Recurring charges found, none assigned yet | Figure + `per month` + `across N recurring charges` |
 | Recurring charges found, all owned | Figure + `per month` + `across N recurring charges` |
 | Recurring charges found, some unowned | Figure + `per month` + `across N recurring charges · $X per month has no owner` |
 | No file uploaded yet | The card is not rendered at all — the workspace does not exist until a file is imported, and the landing screen keeps its own hero. |
+
+The first two rows read the same on purpose. Until the user has named anybody,
+the whole of the total is unclaimed, and repeating the headline figure as an
+unclaimed figure says nothing that the "Needs an owner" list below does not
+already say more clearly. The clause appears at the point where it starts
+describing a *part* of the bill rather than all of it.
 
 The empty state is calm and honest: it names what was looked for and says why
 there is no number, without apologising and without a false zero.

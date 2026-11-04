@@ -64,12 +64,6 @@ export default function TotalPanel({ total }: TotalPanelProps) {
                     </span>
                   </>
                 )}
-                {total.unownedCharges === 0 && (
-                  <>
-                    {" · "}
-                    <span className="text-ink-soft">every one has an owner</span>
-                  </>
-                )}
               </p>
             </>
           ) : (

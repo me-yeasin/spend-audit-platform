@@ -125,10 +125,13 @@ def figure(
     amount: float,
     size: float = 44,
     weight: str = "semibold",
-    tracking: float = -0.45,
+    tracking: float = -0.88,
     fill: str = T_INK,
 ) -> tuple[float, float]:
-    """The big number. Returns (right edge, baseline)."""
+    """The big number. Returns (right edge, baseline).
+
+    The app sets tracking-[-0.02em], which is -0.88 px at 44 px.
+    """
     text = money(amount)
     f = font(weight, size)
     bb = f.getbbox("0")
@@ -140,21 +143,18 @@ def figure(
     return x + cv.tw(text, size, weight, tracking), base
 
 
-def context_line(
+def context_lines(
     cv: Canvas,
-    x: float,
-    cap_top: float,
     charges: int,
-    unowned: float | None = None,
+    unowned: float | None,
     size: float = 12,
     max_w: float | None = None,
-) -> float:
-    """The quiet line under the figure.
+) -> list[list[tuple[str, str]]]:
+    """The context line, broken the way the browser would break it.
 
     "across 14 recurring charges", and -- only when something is unclaimed --
-    the flag-coloured clause on the same line. Wraps when the card is narrow.
+    the flag-coloured clause on the same line.
     """
-    base = baseline_at(cap_top, size, "regular")
     word = "charge" if charges == 1 else "charges"
     head = f"across {charges} recurring {word}"
 
@@ -164,7 +164,6 @@ def context_line(
         clause = f"{money(unowned)} per month has no owner"
         tokens += [(t, T_FLAG) for t in clause.split()]
 
-    # greedy wrap, the way the browser would break the paragraph
     lines: list[list[tuple[str, str]]] = [[]]
     line_w = 0.0
     space = cv.tw(" ", size, "regular")
@@ -177,7 +176,19 @@ def context_line(
             continue
         lines[-1].append((tok, col))
         line_w += add
+    return lines
 
+
+def draw_context(
+    cv: Canvas,
+    x: float,
+    cap_top: float,
+    lines: list[list[tuple[str, str]]],
+    size: float = 12,
+) -> float:
+    """Draw the context line and return the bottom of the last line."""
+    base = baseline_at(cap_top, size, "regular")
+    space = cv.tw(" ", size, "regular")
     y = base
     for line in lines:
         cx = x
@@ -187,7 +198,6 @@ def context_line(
             cv.text((cx, y), tok, size, "regular", col, anchor="ls")
             cx += cv.tw(tok, size, "regular")
         y += size * 1.45
-
     return y
 
 
@@ -234,9 +244,12 @@ def owner_pill(cv: Canvas, x: float, y: float, name: str, height: float = 26, si
     return w
 
 
-def cadence_chip(cv: Canvas, x: float, y: float) -> None:
+def cadence_chip(cv: Canvas, x: float, y: float) -> float:
+    """The 'Monthly' chip. Returns the baseline of its label."""
     cv.rect((x, y, x + 56, y + 18), fill=T_CHIP, radius=9)
-    cv.text((x + 28, y + 4.5), "Monthly", 10, "semibold", T_MUTED, anchor="mt")
+    base = baseline_at(y + 5.5, 10, "semibold")
+    cv.text((x + 28, base), "Monthly", 10, "semibold", T_MUTED, anchor="ms")
+    return base
 
 
 def flag_dot(cv: Canvas, x: float, y: float) -> None:
@@ -285,7 +298,10 @@ def total_card(
     """
     label_h = label_size * 1.25
     num_h = num_size * 1.10
-    ctx_h = ctx_size * 1.35
+    lead = ctx_size * 1.45
+
+    lines = context_lines(cv, charges, unowned, size=ctx_size, max_w=w - pad * 2)
+    ctx_h = len(lines) * lead
 
     if empty:
         head_h = 28 * 1.25
@@ -298,7 +314,7 @@ def total_card(
     cv.rect((x, y, x + w, y + h), fill=T_SURFACE, outline=T_HAIRLINE, width=1, radius=18)
 
     cx = x + pad
-    geo: dict = {"x": cx, "y": y, "w": w, "h": h, "pad": pad}
+    geo: dict = {"x": cx, "y": y, "w": w, "h": h, "pad": pad, "bottom": y + h}
 
     # -- the label
     label_cap = y + pad
@@ -329,9 +345,13 @@ def total_card(
 
     # -- the context line
     ctx_cap = num_cap + num_h + 10
-    ctx_right = context_line(cv, cx, ctx_cap, charges, unowned, size=ctx_size, max_w=w - pad * 2)
+    draw_context(cv, cx, ctx_cap, lines, size=ctx_size)
     geo["ctx_cap"] = ctx_cap
-    geo["ctx_right"] = ctx_right
+    geo["ctx_right"] = cx + max(
+        sum(cv.tw(t, ctx_size, "regular") for t, _ in line)
+        + cv.tw(" ", ctx_size, "regular") * (len(line) - 1)
+        for line in lines
+    )
     return h, geo
 
 
@@ -393,9 +413,9 @@ def workspace(cv: Canvas) -> None:
         cv.text((R_NAME, ry + 13), name, 13.5, "semibold", T_INK)
         cv.text((R_NAME, ry + 34), evidence, 11.5, "regular", T_MUTED)
 
-        cadence_chip(cv, R_CHIP, ry + 14)
+        base = cadence_chip(cv, R_CHIP, ry + 14)
         if varies:
-            cv.text((R_CHIP + 66, ry + 17.5), "amount varies", 10.5, "regular", T_SUBTLE, anchor="mt")
+            cv.text((R_CHIP + 64, base), "amount varies", 10.5, "regular", T_SUBTLE, anchor="ls")
 
         cv.text((R_AMOUNT, ry + 13), money(amount), 13.5, "semibold", T_INK, anchor="rt")
         cv.text((R_AMOUNT, ry + 34), "per month", 10.5, "regular", T_SUBTLE, anchor="rt")
@@ -412,23 +432,23 @@ def workspace(cv: Canvas) -> None:
     cv.text((CARD_L + PAD, 1040), f"{N_CHARGES} recurring charges grouped from {N_TRANSACTIONS} transactions",
             10.5, "regular", T_SUBTLE)
     cv.text((CARD_R - PAD, 1040), money(TOTAL), 10.5, "semibold", T_INK_SOFT, anchor="rt")
-    tail = " per month in total"
-    cv.text((CARD_R - PAD - cv.tw(money(TOTAL), 10.5, "semibold"), 1040), tail, 10.5, "regular", T_INK_SOFT, anchor="rt")
-    cv.badge(786, 1048, 9, r=10)
+    cv.text((CARD_R - PAD - cv.tw(money(TOTAL), 10.5, "semibold"), 1040), " per month in total",
+            10.5, "regular", T_INK_SOFT, anchor="rt")
+    cv.badge(729, 1018, 9, r=10)
 
 
 # ------------------------------------------------------------------ variants
 def variant_with(cv: Canvas) -> None:
     """The card as built, with the unclaimed figure on the context line."""
-    y = 172
+    y = 168
     _, geo = total_card(cv, CD_X, y, CD_R - CD_X)
     cv.badge(864, geo["num_cap"] + 18, 2, r=10)
     cv.badge(geo["unit_right"] + 16, geo["num_base"] - 8, 3, r=10)
     cv.badge(864, geo["ctx_cap"] + 6, 4, r=10)
-    cv.badge(geo["ctx_right"] + 14, geo["ctx_cap"] + 6, 5, r=10)
+    cv.badge(geo["ctx_right"] + 16, geo["ctx_cap"] + 6, 5, r=10)
 
     cv.paragraph(
-        (CD_X, y + geo["h"] + 12),
+        (CD_X, geo["bottom"] + 10),
         "Some charges have no owner. The unclaimed figure sits on the same line, "
         "in the flag colour, and is always a subset of the figure above it.",
         CD_R - CD_X,
@@ -441,12 +461,12 @@ def variant_with(cv: Canvas) -> None:
 
 def variant_without(cv: Canvas) -> None:
     """The card once every charge has an owner: the clause is gone."""
-    y = 352
+    y = 366
     _, geo = total_card(cv, CD_X, y, CD_R - CD_X, unowned=None)
-    cv.badge(geo["ctx_right"] + 14, geo["ctx_cap"] + 6, 6, r=10)
+    cv.badge(geo["ctx_right"] + 16, geo["ctx_cap"] + 6, 6, r=10)
 
     cv.paragraph(
-        (CD_X, y + geo["h"] + 12),
+        (CD_X, geo["bottom"] + 10),
         "Every charge has an owner. The clause disappears rather than showing "
         "$0.00 — and there is no green tick. Green is for income.",
         CD_R - CD_X,
@@ -459,12 +479,12 @@ def variant_without(cv: Canvas) -> None:
 
 def empty(cv: Canvas) -> None:
     """The card when the statement holds no recurring charges."""
-    y = 532
+    y = 564
     _, geo = total_card(cv, CD_X, y, CD_R - CD_X, empty=True)
     cv.badge(864, geo["head_cap"] + 12, 7, r=10)
 
     cv.paragraph(
-        (CD_X, y + geo["h"] + 12),
+        (CD_X, geo["bottom"] + 10),
         "No $0.00. A zero would claim you pay nothing; the truth is that "
         "nothing repeated often enough to count. Same card, same padding.",
         CD_R - CD_X,
@@ -477,24 +497,20 @@ def empty(cv: Canvas) -> None:
 
 # ------------------------------------------------------------------ mobile
 def mobile(cv: Canvas) -> None:
-    cv.badge(858, 704, 8, r=10)
-    cv.text((880, 698), "MOBILE — 320 PX", 9.5, "semibold", T_MUTED, tracking=1.8)
+    cv.badge(858, 752, 8, r=10)
+    cv.text((880, 746), "MOBILE — 320 PX", 9.5, "semibold", T_MUTED, tracking=1.8)
 
-    px0, py0, px1, py1 = 852, 720, 1172, 1120
+    px0, py0, px1, py1 = 852, 768, 1172, 1120
     cv.shadow((px0, py0, px1, py1), radius=16, spread=14, alpha=14, offset=5)
     cv.rect((px0, py0, px1, py1), fill=T_PAGE, outline=T_HAIRLINE, width=1, radius=16)
 
     # the card at 320 px: 20 px padding, a 32 px figure, a wrapped context line
     cx0, cx1 = 872, 1152
-    cy = 736
+    cy = 784
     h, geo = total_card(
         cv, cx0, cy, cx1 - cx0,
         num_size=32, unit_size=12.5, ctx_size=12, pad=20, flat=True,
     )
-    # the unit drops in beside the figure, on the same baseline
-    cv.text((geo["unit_right"] - 8 - cv.tw("per month", 12.5, "regular"), geo["num_base"]),
-            "per month", 12.5, "regular", T_SUBTLE, anchor="rt")
-    cv.badge(864, geo["ctx_cap"] + 20, 8, r=10)
 
     # what comes next, so the order is still legible at 320 px
     ny = cy + h + 14
@@ -502,19 +518,21 @@ def mobile(cv: Canvas) -> None:
     cv.text((cx0 + 14, ny + 14), "NEEDS AN OWNER", 9, "semibold", T_INK, tracking=1.3)
     hw = cv.tw("NEEDS AN OWNER", 9, "semibold", 1.3)
     count_badge(cv, cx0 + 14 + hw + 7, ny + 10, N_UNOWNED, h=15)
-    for i, (name, amount) in enumerate(
-        [("GEICO AUTO INSURANCE", 128.50), ("CITY POWER & WATER", 123.40)]
+    for i, (name, amount, evidence) in enumerate(
+        [
+            ("GEICO AUTO INSURANCE", 128.50, "3 payments · $385.50 total"),
+            ("CITY POWER & WATER", 123.40, "3 payments · $370.20 total"),
+        ]
     ):
         ry = ny + 44 + i * 38
         flag_dot(cv, cx0 + 18, ry + 5)
         cv.text((cx0 + 30, ry + 1), name, 10.5, "semibold", T_INK)
         cv.text((cx1 - 14, ry + 1), money(amount), 10.5, "semibold", T_INK, anchor="rt")
-        cv.text((cx0 + 30, ry + 17), "3 payments · $385.50 total" if i == 0 else "3 payments · $370.20 total",
-                9, "regular", T_MUTED)
+        cv.text((cx0 + 30, ry + 17), evidence, 9, "regular", T_MUTED)
 
     # the notes beside the phone
     nx = 1196
-    ny2 = 736
+    ny2 = 784
     for title, body in (
         ("32 px", "The figure drops a step and is still the largest type on the screen."),
         ("20 px", "The padding is unchanged. Nothing is cropped."),
@@ -524,7 +542,7 @@ def mobile(cv: Canvas) -> None:
                 "break, no orphaned words."),
     ):
         cv.text((nx, ny2), title, 9, "semibold", T_MUTED, tracking=1.3)
-        ny2 = cv.paragraph((nx, ny2 + 14), body, CD_R - nx, 9.2, "regular", T_MUTED, 1.45) + 10
+        ny2 = cv.paragraph((nx, ny2 + 14), body, CD_R - nx, 9.2, "regular", T_MUTED, 1.45) + 12
 
 
 # ------------------------------------------------------------------ legend

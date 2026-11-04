@@ -238,8 +238,8 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   state = await probe(page);
-  truthy("the line says every charge has an owner", state.context?.includes("every one has an owner"));
-  truthy("and does not mention unowned money", !state.context?.includes("has no owner"));
+  truthy("the unowned clause is gone", !state.context?.includes("has no owner"));
+  truthy("the line is back to plain", state.context?.includes("across 14 recurring charges"));
   check("the headline is untouched", state.amount, beforeClaimAll);
 
   console.log("\nmobile, 320px");  const mobile = await browser.newPage();
