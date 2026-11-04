@@ -4,8 +4,10 @@ import { LockIcon } from "./icons";
 import { useStatementImport } from "./use-statement-import";
 import { useOwners } from "./use-owners";
 import { unownedGroups } from "@/lib/owners";
+import { summariseRecurring } from "@/lib/total";
 import UploadCard from "./upload-card";
 import FileChip from "./file-chip";
+import TotalPanel from "./total-panel";
 import FlaggedPanel from "./flagged-panel";
 import RecurringPanel from "./recurring-panel";
 import TransactionsPanel from "./transactions-panel";
@@ -19,6 +21,7 @@ export default function HomeScreen() {
   const showHero = !inWorkspace;
 
   const unowned = unownedGroups(imp.recurring, owners);
+  const total = summariseRecurring(imp.recurring, (key) => ownerOf(key) !== null);
 
   return (
     <main className="flex flex-1 flex-col items-center px-5 pt-14 pb-16 sm:px-8 sm:pt-20 sm:pb-20 lg:pt-[88px]">
@@ -72,6 +75,10 @@ export default function HomeScreen() {
 
           {imp.transactions.length > 0 && (
             <>
+              <section className="mt-6 w-full sm:mt-8" aria-label="Total monthly recurring cost">
+                <TotalPanel total={total} />
+              </section>
+
               <section className="mt-6 w-full sm:mt-8" aria-label="Charges needing an owner">
                 <FlaggedPanel
                   groups={unowned}
@@ -124,6 +131,10 @@ export default function HomeScreen() {
           {/* Keep the previous results visible while a replacement is read. */}
           {inWorkspace && imp.transactions.length > 0 && (
             <>
+              <section className="mt-6 w-full sm:mt-8" aria-label="Total monthly recurring cost">
+                <TotalPanel total={total} />
+              </section>
+
               <section className="mt-6 w-full sm:mt-8" aria-label="Charges needing an owner">
                 <FlaggedPanel
                   groups={unowned}

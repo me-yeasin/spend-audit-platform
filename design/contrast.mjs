@@ -147,6 +147,17 @@ const results = await page.evaluate(() => {
     );
   }
 
+  // the total panel
+  const total = document.querySelector("[data-total-panel]");
+  if (total) {
+    add("total label", total.querySelector("h2"));
+    add("total amount", total.querySelector("[data-total-amount]"));
+    const context = total.querySelectorAll("p")[1];
+    add("total context", context);
+    const unowned = [...context.querySelectorAll("span")][0];
+    add("total unowned", unowned);
+  }
+
   return samples;
 });
 

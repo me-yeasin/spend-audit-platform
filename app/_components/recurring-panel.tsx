@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatAmount, formatCost, formatDate } from "@/lib/format";
 import type { RecurringGroup } from "@/lib/detect-recurring";
+import { sumMonthly } from "@/lib/total";
 import { ChevronIcon } from "./icons";
 import OwnerControl from "./owner-control";
 
@@ -32,6 +33,8 @@ export default function RecurringPanel({
   onClear,
 }: RecurringPanelProps) {
   const [openKey, setOpenKey] = useState<string | null>(null);
+
+  const monthlyTotal = sumMonthly(groups);
 
   const toggle = (key: string) => {
     setOpenKey((current) => (current === key ? null : key));
@@ -182,12 +185,20 @@ export default function RecurringPanel({
 
             <div
               data-panel-footer
-              className="border-t border-hairline px-5 py-4 sm:px-6"
+              className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-hairline px-5 py-4 sm:px-6"
             >
               <p className="text-[11.5px] text-subtle">
                 {groups.length} recurring {groups.length === 1 ? "charge" : "charges"} grouped
                 from {totalTransactions.toLocaleString()} transactions
               </p>
+              {groups.length > 0 && (
+                <p className="text-[11.5px] text-ink-soft">
+                  <span className="font-semibold tabular-nums">
+                    {formatCost(monthlyTotal)}
+                  </span>{" "}
+                  per month in total
+                </p>
+              )}
             </div>
           </>
         )}
