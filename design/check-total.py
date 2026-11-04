@@ -101,6 +101,11 @@ def check_geometry() -> list[str]:
         if x0 < 2 or y0 < 2 or x1 > W - 2 or y1 > H - 2:
             problems.append(f"off-canvas: {txt!r} at ({x0:.0f},{y0:.0f})-({x1:.0f},{y1:.0f})")
 
+    # nothing may run into the footer rule at y = 1136
+    for txt, x0, y0, x1, y1 in BOXES:
+        if y1 > 1131 and y0 < 1146:
+            problems.append(f"in the footer rule: {txt!r} at y={y0:.0f}..{y1:.0f}")
+
     for i in range(len(BOXES)):
         for j in range(i + 1, len(BOXES)):
             a, b = BOXES[i], BOXES[j]

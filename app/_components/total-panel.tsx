@@ -23,15 +23,9 @@ export default function TotalPanel({ total }: TotalPanelProps) {
       aria-labelledby="total-heading"
       data-total-panel
     >
-      <div
-        role="status"
-        aria-live="polite"
-        className="sr-only"
-      >
-        {hasCharges
-          ? `Total monthly recurring cost: ${formatCost(total.monthly)} per month, across ${total.charges} recurring ${total.charges === 1 ? "charge" : "charges"}.`
-          : "No recurring charges found."}
-      </div>
+      {/* No live region here on purpose: the workspace announces the figure
+          from a region that is on the page before the file is read. A live
+          region mounted already filled in is never announced. */}
 
       <div className="rounded-[20px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(18,18,15,0.04),0_18px_44px_-30px_rgba(18,18,15,0.28)]">
         <div className="px-5 py-5 sm:px-6 sm:py-6">
@@ -47,22 +41,25 @@ export default function TotalPanel({ total }: TotalPanelProps) {
               <p className="mt-1.5 flex items-baseline gap-2">
                 <span
                   data-total-amount
-                  className="text-[32px] font-semibold tracking-[-0.02em] tabular-nums text-ink sm:text-[44px] sm:leading-[1.1]"
+                  className="text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] tabular-nums text-ink sm:text-[44px]"
                 >
                   {formatCost(total.monthly)}
                 </span>
                 <span className="text-[12.5px] text-subtle sm:text-[13px]">per month</span>
               </p>
 
-              <p className="mt-2.5 text-[12px] text-subtle">
-                across {total.charges} recurring {total.charges === 1 ? "charge" : "charges"}
+              {/* Two facts. On a narrow screen they sit on their own lines,
+                  so the second one never breaks across a phrase. */}
+              <p className="mt-2.5 flex flex-col text-[12px] text-subtle sm:flex-row">
+                <span>
+                  across {total.charges} recurring{" "}
+                  {total.charges === 1 ? "charge" : "charges"}
+                </span>
                 {total.unownedCharges > 0 && total.unownedCharges < total.charges && (
-                  <>
-                    {" · "}
-                    <span className="text-flag">
-                      {formatCost(total.unownedMonthly)} per month has no owner
-                    </span>
-                  </>
+                  <span className="text-flag">
+                    <span className="hidden sm:inline"> · </span>
+                    {formatCost(total.unownedMonthly)} per month has no owner
+                  </span>
                 )}
               </p>
             </>

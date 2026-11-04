@@ -322,44 +322,56 @@ comes from the context, not from a sign.
 
 ### `aria-live` behaviour
 
-The card contains a visually hidden live region:
+The card does **not** hold a live region of its own. The workspace keeps two
+visually hidden regions on the page from the start — one for what was loaded,
+one for what still needs an owner:
 
 ```tsx
 <div role="status" aria-live="polite" className="sr-only">
-  {hasCharges
-    ? `Total monthly recurring cost: ${formatCost(total.monthly)} per month, across ${total.charges} recurring ${total.charges === 1 ? "charge" : "charges"}.`
-    : "No recurring charges found."}
+  {loadSummary}
+</div>
+<div role="status" aria-live="polite" className="sr-only">
+  {ownerSummary}
 </div>
 ```
 
-`role="status"` implies `aria-live="polite"`, so it never interrupts the user.
-The announcement is a full sentence, not the bare number: "Total monthly
-recurring cost: $2,401.64 per month, across 14 recurring charges." A bare
-"$2,401.64" with no unit and no count is much harder to act on when heard
-without the screen.
+`role="status"` implies `aria-live="polite"`, so neither ever interrupts the
+user. The first reads:
 
-When a **new file is uploaded** and the number changes, the region re-renders
-with new text and the announcement fires once. Because the text is a
-derived string rather than a concatenation, it changes only when the value
-actually changes — assigning an owner does not re-announce the total.
+> "62 transactions loaded, newest first. 14 recurring charges, $2,401.64 per
+> month."
 
-**Known gap.** The live region is inside the panel, and the panel is only
-mounted once `imp.transactions.length > 0`. On the *first* upload the region is
-inserted into the DOM already populated. Live regions are only reliably
-announced when they change *after* they exist, so the first total may not be
-spoken. The fix, when the code is next touched, is to keep the live region
-mounted from the start of the workspace and only change its text. The
-Recurring charges panel has the same pattern and the same gap.
+and the second:
+
+> "14 recurring charges need an owner."
+
+The announcements are full sentences, not bare numbers: "$2,401.64" with no
+unit and no count is much harder to act on when heard without the screen.
+
+**Why the regions live outside the panels.** A live region is only reliably
+announced when its text changes *after* it exists. A region mounted already
+populated — which is what happens when the workspace appears on the first
+upload — is usually silent. So both regions are rendered on the landing page
+too, empty, and are already on the screen by the time a file is read. The
+first total is therefore announced with the first upload.
+
+The two regions are split so that each change is said once: the load summary
+changes when a file is read, the owner summary changes when a charge is
+claimed. Assigning an owner does not re-announce the total, and loading a
+file does not re-announce the whole owner list.
 
 ### Landmarks
 
-`TotalPanel` renders `<section aria-labelledby="total-heading">`, and
-`home-screen.tsx` wraps it in `<section aria-label="Total monthly recurring
-cost">`. That produces **two `region` landmarks with the same accessible
-name**, one inside the other. Screen readers will list "Total monthly recurring
-cost" twice in the landmark list. The inner `aria-labelledby` is the one that
-should stay (it points at the visible heading, so the name matches the text);
-the outer `aria-label` is redundant and should be dropped.
+`TotalPanel` renders `<section aria-labelledby="total-heading">`, so the
+region's name comes from the visible heading. The wrapper that gives it
+spacing in `home-screen.tsx` is a plain `<div>`, not a `<section>` with an
+`aria-label` of its own — otherwise the page would list "Total monthly
+recurring cost" **twice** in the landmark list, one region inside the other.
+
+The same rule applies to every panel on the page: the spacing wrappers in
+`home-screen.tsx` are plain `<div>`s, and each panel names itself from its own
+heading. No two landmarks on the page share a name, which is checked by
+`design/interactions.mjs`.
 
 ### The unclaimed clause
 
@@ -612,24 +624,20 @@ own support forum, which was reachable, and make no claim about type scale.
 
 **Known limits of what is built**
 
-1. **The first total may not be announced.** The live region is mounted with
-   its content already in it on the first upload, and live regions are only
-   reliably announced when they change after they exist. (§7)
-2. **Two landmarks named "Total monthly recurring cost".** The outer
-   `<section aria-label>` in `home-screen.tsx` and the inner
-   `<section aria-labelledby="total-heading">` in `total-panel.tsx`. (§7)
-3. **The context line can break mid-phrase on a narrow screen.** It is one
-   paragraph with an inline `<span>` for the flag clause, so the browser breaks
-   wherever it fits — on a 320px screen that lands inside the phrase, e.g.
-   "across 14 recurring charges · $451.15 per" / "month has no owner". The fix
-   is to make the two facts separate blocks (or flex items with a gap) below
-   ~380px so the flag clause gets its own line.
-4. **The separator can start a line.** For the same reason, the `·` may begin
-   a line. Making the separator a flex item that can be hidden at narrow widths
-   removes the problem entirely.
-5. **The figure has no explicit `leading` on mobile.** `sm:leading-[1.1]`
-   applies from 640px up; below that the browser default leading applies to the
-   32px figure, which is looser than the desktop card.
+1. ~~**The first total may not be announced.**~~ **Fixed.** The two live
+   regions now live on the workspace, outside the panels, so they exist before
+   the first file is read and the first upload is announced. (§7)
+2. ~~**Two landmarks named "Total monthly recurring cost".**~~ **Fixed.** The
+   spacing wrappers are plain `<div>`s; each panel names itself from its own
+   heading, and no two landmarks share a name. (§7)
+3. ~~**The context line can break mid-phrase on a narrow screen.**~~ **Fixed.**
+   The two facts are flex items that stack below 640px, so the flag clause gets
+   its own line instead of breaking inside a phrase.
+4. ~~**The separator can start a line.**~~ **Fixed** with the same change: the
+   `·` is hidden below 640px, where the two facts are on separate lines.
+5. **The figure's leading is now set at every size.** `leading-[1.1]` applies at
+   both 32px (mobile) and 44px (desktop), so the card does not change its
+   rhythm between breakpoints.
 6. **`formatCost` is fixed to en-US USD** while dates use en-GB
    ("27 Oct 2026"). Consistent with the no-multi-currency scope, but the mix is
    visible.
@@ -642,9 +650,8 @@ own support forum, which was reachable, and make no claim about type scale.
    The card says "14 recurring charges", not "your monthly commitments", and
    the label "recurring cost" is doing real work in that sentence.
 9. **The unclaimed figure depends on browser local storage.** On a new device
-   the figure is the whole total again, because nothing is claimed yet. This is
-   the "redundant clause" case in §9 and the reason for the recommended
-   suppression.
+   nothing is claimed yet, so the clause is not shown at all — see §4.1 for why
+   it is suppressed in that state.
 10. **The owner state is per merchant key, not per statement.** If a merchant
     is renamed by the bank between months the key changes and the owner is
     lost. Not caused by this feature, but it changes the number in the flag
@@ -680,4 +687,5 @@ own support forum, which was reachable, and make no claim about type scale.
 | `app/_components/recurring-panel.tsx` | the footer that repeats the sum |
 | `design/08-total-cost.png` | the annotated diagram |
 | `design/total-cost.py` | the script that renders it |
+| `design/check-total.py` | the checker that proves the render is sound — no text off the canvas, no text overlapping, nothing leaking out of a panel, the figure still ink and the unclaimed clause still flag red, and the total still equal to the fixture |
 | `design/TOTAL.md` | this document |

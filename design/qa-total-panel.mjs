@@ -161,7 +161,7 @@ try {
       (el.textContent ?? "").replace(/\s+/g, " ").trim(),
     ),
   );
-  check("there are three announcements", live.length, 3);
+  check("there are two announcements", live.length, 2);
   truthy("one says how many transactions were loaded", live.some((t) => t.includes("transactions loaded")));
   truthy("one says what it costs per month", live.some((t) => t.includes("per month")));
   truthy("one says what needs an owner", live.some((t) => t.includes("need an owner")));
@@ -256,6 +256,28 @@ try {
   truthy("the number still fits", m.amountBox.w <= m.panelBox.w);
   truthy("the number is smaller on mobile", m.fontSize < 40);
   truthy("but still the biggest thing there", m.fontSize >= 28);
+
+  // the two facts must not break across a phrase on a narrow screen
+  const line = await mobile.evaluate(() => {
+    const panel = document.querySelector("[data-total-panel]");
+    const spans = [...panel.querySelectorAll("p span")].filter(
+      (span) => span.textContent.includes("recurring") || span.textContent.includes("no owner"),
+    );
+    return spans.map((span) => {
+      const r = span.getBoundingClientRect();
+      return {
+        text: span.textContent.trim().slice(0, 40),
+        top: Math.round(r.top),
+        height: Math.round(r.height),
+        lines: Math.round(r.height / 16),
+      };
+    });
+  });
+  truthy("the count sits on its own line", line[0]?.lines === 1);
+  truthy(
+    "the unclaimed figure starts on a line of its own",
+    line[1] === undefined || line[1].top > line[0].top,
+  );
   await mobile.screenshot({ path: path.join(outDir, "total-mobile.png") });
   console.log("shot  total-mobile");
   await mobile.close();

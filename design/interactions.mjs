@@ -142,21 +142,45 @@ check("chip offers replace and remove", actions.chipButtons.join("|"), "Replace 
 check("panel is a list", actions.panelHasList > 0, true);
 console.log("panel actions:", JSON.stringify(actions.panelButtons));
 
-// 4. the panel announces itself to screen readers
+// 4. the workspace announces itself to screen readers
 const a11y = await page.evaluate(() => {
   const panel = document.querySelector("[data-transactions-panel]");
-  const live = panel.querySelector("[role='status']");
   const heading = panel.querySelector("h2");
+  // The live regions live on the page outside the panels, so they are on
+  // the screen before the file is read and can announce the first load.
+  const live = [...document.querySelectorAll("[role='status']")].map((el) =>
+    (el.textContent ?? "").trim(),
+  );
   return {
-    live: live?.textContent?.trim(),
+    live,
     labelledBy: panel.getAttribute("aria-labelledby"),
     headingId: heading?.id,
     oneHeading: document.querySelectorAll("main h1").length === 1,
+    // no two landmarks may share a name
+    landmarkNames: [...document.querySelectorAll("main section, main [role='region']")]
+      .map((el) => el.getAttribute("aria-label") ?? el.getAttribute("aria-labelledby"))
+      .filter(Boolean),
   };
 });
-check("panel has a live region", a11y.live?.includes("transactions loaded"), true);
+check(
+  "the workspace announces what was loaded",
+  a11y.live.some((text) => text.includes("transactions loaded")),
+  true,
+);
+check(
+  "and says when nothing recurs",
+  a11y.live.some((text) => text.includes("No recurring charges found")),
+  true,
+);
+const spoken = a11y.live.filter(Boolean);
+check("nothing is announced twice", new Set(spoken).size, spoken.length);
 check("panel is labelled by its heading", a11y.labelledBy, a11y.headingId);
 check("exactly one h1 on the page", a11y.oneHeading, true);
+check(
+  "no two landmarks share a name",
+  new Set(a11y.landmarkNames).size,
+  a11y.landmarkNames.length,
+);
 
 await browser.close();
 

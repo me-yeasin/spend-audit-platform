@@ -434,7 +434,7 @@ def workspace(cv: Canvas) -> None:
     cv.text((CARD_R - PAD, 1040), money(TOTAL), 10.5, "semibold", T_INK_SOFT, anchor="rt")
     cv.text((CARD_R - PAD - cv.tw(money(TOTAL), 10.5, "semibold"), 1040), " per month in total",
             10.5, "regular", T_INK_SOFT, anchor="rt")
-    cv.badge(729, 1018, 9, r=10)
+    cv.badge(738, 1018, 9, r=10)
 
 
 # ------------------------------------------------------------------ variants
@@ -443,9 +443,9 @@ def variant_with(cv: Canvas) -> None:
     y = 168
     _, geo = total_card(cv, CD_X, y, CD_R - CD_X)
     cv.badge(864, geo["num_cap"] + 18, 2, r=10)
-    cv.badge(geo["unit_right"] + 16, geo["num_base"] - 8, 3, r=10)
+    cv.badge(geo["unit_right"] + 27, geo["num_base"] - 8, 3, r=10)
     cv.badge(864, geo["ctx_cap"] + 6, 4, r=10)
-    cv.badge(geo["ctx_right"] + 16, geo["ctx_cap"] + 6, 5, r=10)
+    cv.badge(geo["ctx_right"] + 24, geo["ctx_cap"] + 6, 5, r=10)
 
     cv.paragraph(
         (CD_X, geo["bottom"] + 10),
@@ -463,7 +463,7 @@ def variant_without(cv: Canvas) -> None:
     """The card once every charge has an owner: the clause is gone."""
     y = 366
     _, geo = total_card(cv, CD_X, y, CD_R - CD_X, unowned=None)
-    cv.badge(geo["ctx_right"] + 16, geo["ctx_cap"] + 6, 6, r=10)
+    cv.badge(geo["ctx_right"] + 25, geo["ctx_cap"] + 6, 6, r=10)
 
     cv.paragraph(
         (CD_X, geo["bottom"] + 10),
@@ -666,14 +666,25 @@ def legend(cv: Canvas) -> float:
     ly += 20
     ly = cv.paragraph(
         (C3_X, ly),
-        "$2,401.64 a month across 14 charges, from a 62-transaction statement. "
-        "$451.15 of it has no owner.",
+        "$2,401.64 a month across 14 charges · $451.15 has no owner",
         C3_W,
         9.8,
         "regular",
         T_MUTED,
         1.45,
     )
+
+    ly += 12
+    cv.text((C3_X, ly), "THE THREE CARDS", 9.5, "semibold", T_MUTED, tracking=1.8)
+    ly += 20
+    for state, body in (
+        ("Charges found", "$2,401.64 per month, across 14 charges"),
+        ("Some unclaimed", "+ $451.15 per month has no owner"),
+        ("None found", "No recurring charges found, and why"),
+    ):
+        cv.text((C3_X, ly), state, 9.8, "semibold", T_INK)
+        cv.text((C3_X + 96, ly), body, 9.8, "regular", T_MUTED)
+        ly += 16
     return ly
 
 

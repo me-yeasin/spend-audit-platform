@@ -5,6 +5,7 @@ import { useStatementImport } from "./use-statement-import";
 import { useOwners } from "./use-owners";
 import { unownedGroups } from "@/lib/owners";
 import { summariseRecurring } from "@/lib/total";
+import { formatCost } from "@/lib/format";
 import UploadCard from "./upload-card";
 import FileChip from "./file-chip";
 import TotalPanel from "./total-panel";
@@ -22,6 +23,27 @@ export default function HomeScreen() {
 
   const unowned = unownedGroups(imp.recurring, owners);
   const total = summariseRecurring(imp.recurring, (key) => ownerOf(key) !== null);
+
+  // What a screen reader is told, in two sentences: what was loaded, and
+  // what still needs an owner.
+  const loadSummary = !imp.imported
+    ? ""
+    : imp.parseIssue
+      ? "This statement could not be read."
+      : imp.transactions.length === 0
+        ? "No transactions found."
+        : `${imp.transactions.length.toLocaleString()} transactions loaded, newest first. ${
+            total.charges === 0
+              ? "No recurring charges found."
+              : `${total.charges} recurring ${total.charges === 1 ? "charge" : "charges"}, ${formatCost(total.monthly)} per month.`
+          }`;
+
+  const ownerSummary =
+    imp.recurring.length === 0
+      ? ""
+      : unowned.length === 0
+        ? "Every recurring charge has an owner."
+        : `${unowned.length} recurring ${unowned.length === 1 ? "charge needs" : "charges need"} an owner.`;
 
   return (
     <main className="flex flex-1 flex-col items-center px-5 pt-14 pb-16 sm:px-8 sm:pt-20 sm:pb-20 lg:pt-[88px]">
@@ -50,20 +72,21 @@ export default function HomeScreen() {
         </section>
       )}
 
-      {/* Announces the owner status as it changes, including the moment
-          every charge has been claimed and the section disappears. */}
+      {/* These two regions are always on the page, empty until there is
+          something to say. A live region that is mounted already filled in
+          is not announced by a screen reader, so the announcement of the
+          first upload has to live outside the workspace. */}
       <div role="status" aria-live="polite" className="sr-only">
-        {imp.recurring.length === 0
-          ? ""
-          : unowned.length === 0
-            ? "Every recurring charge has an owner."
-            : `${unowned.length} recurring ${unowned.length === 1 ? "charge needs" : "charges need"} an owner.`}
+        {loadSummary}
+      </div>
+      <div role="status" aria-live="polite" className="sr-only">
+        {ownerSummary}
       </div>
 
       {/* ---------------------------------------------------- upload card */}
       {inWorkspace && imp.phase === "ready" && imp.imported ? (
         <>
-          <section className="mt-0 w-full" aria-label="Imported statement">
+          <div className="mt-0 w-full">
             <FileChip
               name={imp.imported.name}
               sizeLabel={imp.imported.sizeLabel}
@@ -71,24 +94,24 @@ export default function HomeScreen() {
               onReplace={imp.openPicker}
               onRemove={imp.remove}
             />
-          </section>
+          </div>
 
           {imp.transactions.length > 0 && (
             <>
-              <section className="mt-6 w-full sm:mt-8" aria-label="Total monthly recurring cost">
+              <div className="mt-6 w-full sm:mt-8">
                 <TotalPanel total={total} />
-              </section>
+              </div>
 
-              <section className="mt-6 w-full sm:mt-8" aria-label="Charges needing an owner">
+              <div className="mt-6 w-full sm:mt-8">
                 <FlaggedPanel
                   groups={unowned}
                   roster={roster}
                   onAssign={setOwner}
                   onClear={clearOwner}
                 />
-              </section>
+              </div>
 
-              <section className="mt-6 w-full sm:mt-8" aria-label="Recurring charges">
+              <div className="mt-6 w-full sm:mt-8">
                 <RecurringPanel
                   groups={imp.recurring}
                   totalTransactions={imp.transactions.length}
@@ -97,25 +120,22 @@ export default function HomeScreen() {
                   onAssign={setOwner}
                   onClear={clearOwner}
                 />
-              </section>
+              </div>
             </>
           )}
 
-          <section className="mt-6 w-full sm:mt-8" aria-label="Transactions">
+          <div className="mt-6 w-full sm:mt-8">
             <TransactionsPanel
               transactions={imp.transactions}
               parseIssue={imp.parseIssue}
               skippedRows={imp.skippedRows}
               onChooseFile={imp.openPicker}
             />
-          </section>
+          </div>
         </>
       ) : (
         <>
-          <section
-            className={inWorkspace ? "mt-0 w-full" : "mt-10 w-full sm:mt-12"}
-            aria-label="Import a statement"
-          >
+          <div className={inWorkspace ? "mt-0 w-full" : "mt-10 w-full sm:mt-12"}>
             <UploadCard
               inputRef={imp.inputRef}
               state={imp.state}
@@ -126,25 +146,25 @@ export default function HomeScreen() {
               onDragEnter={imp.onDragEnter}
               onDragLeave={imp.onDragLeave}
             />
-          </section>
+          </div>
 
           {/* Keep the previous results visible while a replacement is read. */}
           {inWorkspace && imp.transactions.length > 0 && (
             <>
-              <section className="mt-6 w-full sm:mt-8" aria-label="Total monthly recurring cost">
+              <div className="mt-6 w-full sm:mt-8">
                 <TotalPanel total={total} />
-              </section>
+              </div>
 
-              <section className="mt-6 w-full sm:mt-8" aria-label="Charges needing an owner">
+              <div className="mt-6 w-full sm:mt-8">
                 <FlaggedPanel
                   groups={unowned}
                   roster={roster}
                   onAssign={setOwner}
                   onClear={clearOwner}
                 />
-              </section>
+              </div>
 
-              <section className="mt-6 w-full sm:mt-8" aria-label="Recurring charges">
+              <div className="mt-6 w-full sm:mt-8">
                 <RecurringPanel
                   groups={imp.recurring}
                   totalTransactions={imp.transactions.length}
@@ -153,16 +173,16 @@ export default function HomeScreen() {
                   onAssign={setOwner}
                   onClear={clearOwner}
                 />
-              </section>
+              </div>
 
-              <section className="mt-6 w-full sm:mt-8" aria-label="Transactions">
+              <div className="mt-6 w-full sm:mt-8">
                 <TransactionsPanel
                   transactions={imp.transactions}
                   parseIssue={imp.parseIssue}
                   skippedRows={imp.skippedRows}
                   onChooseFile={imp.openPicker}
                 />
-              </section>
+              </div>
             </>
           )}
         </>
