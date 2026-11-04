@@ -65,6 +65,11 @@ equal("an unknown charge has none", ownerFor(owners, "GONE"), null);
 console.log("\nthe roster of names already in use");
 equal("names are unique and sorted", knownOwners({ A: "Zoe", B: "Sam", C: "Zoe" }), ["Sam", "Zoe"]);
 equal("an empty map has no names", knownOwners({}), []);
+equal(
+  "the same name in different case is one person",
+  knownOwners({ A: "sam", B: "Sam", C: "Kim" }),
+  ["Kim", "sam"],
+);
 
 // ---------------------------------------------------------------- groups
 console.log("\ncharges with nobody owning them");

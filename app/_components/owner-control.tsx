@@ -25,14 +25,12 @@ export default function OwnerControl({
 }: OwnerControlProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
   const listId = useId();
 
   const startEditing = () => {
     setDraft(owner ?? "");
     setEditing(true);
-    // The input is not in the tree until the next render.
-    window.requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const cancel = () => {
@@ -45,14 +43,38 @@ export default function OwnerControl({
     setEditing(false);
     setDraft("");
     if (name !== "") onSave(name);
+    // The input is replaced by the name pill. Put the caret on the pill so
+    // the keyboard is not dropped on the floor.
+    window.requestAnimationFrame(() => {
+      wrapperRef.current?.querySelector<HTMLElement>("button")?.focus();
+    });
+  };
+
+  const clear = () => {
+    onClear();
+    // The pill is replaced by an empty slot. Keep the caret on it.
+    window.requestAnimationFrame(() => {
+      wrapperRef.current?.querySelector<HTMLElement>("button")?.focus();
+    });
   };
 
   if (editing) {
     return (
-      <span className="flex items-center gap-1.5">
+      <span
+        ref={wrapperRef}
+        className="flex items-center gap-1.5"
+        onBlur={(event) => {
+          // Tabbing inside the editor keeps it open; leaving it altogether
+          // dismisses it. The buttons beside the input keep the focus on
+          // the field, so their own click never eats this.
+          const next = event.relatedTarget as Node | null;
+          if (next && event.currentTarget.contains(next)) return;
+          cancel();
+        }}
+      >
         <input
-          ref={inputRef}
           type="text"
+          autoFocus
           list={listId}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -78,6 +100,7 @@ export default function OwnerControl({
 
         <button
           type="button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={confirm}
           aria-label={`Save owner for ${merchant}`}
           className="grid size-7 place-items-center rounded-[8px] bg-accent-soft text-accent transition-colors hover:bg-[#dceee5]"
@@ -95,6 +118,7 @@ export default function OwnerControl({
 
         <button
           type="button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={cancel}
           aria-label={`Cancel owner for ${merchant}`}
           className="grid size-7 place-items-center rounded-[8px] text-subtle transition-colors hover:bg-[#f2f1ec] hover:text-ink-soft"
@@ -114,13 +138,24 @@ export default function OwnerControl({
 
   if (owner) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f0e9] py-1 pl-2.5 pr-1 text-[11px] font-semibold text-ink-soft">
-        <span className="max-w-[7rem] truncate" title={owner}>
-          {owner}
-        </span>
+      <span
+        ref={wrapperRef}
+        className="inline-flex items-center gap-1 rounded-full bg-[#f1f0e9] py-1 pl-1 pr-1 text-[11px] font-semibold text-ink-soft"
+      >
+        {/* The name is the control that opens the editor again, so it is
+            also where the caret lands after a name is confirmed. Parking it
+            on the clear button would undo the name on a second press. */}
         <button
           type="button"
-          onClick={onClear}
+          onClick={startEditing}
+          aria-label={`${owner} owns ${merchant}. Change the owner.`}
+          className="max-w-[7rem] truncate rounded-full px-1.5 py-0.5 text-left transition-colors hover:bg-[#e6e4da]"
+        >
+          {owner}
+        </button>
+        <button
+          type="button"
+          onClick={clear}
           aria-label={`Remove ${owner} as owner of ${merchant}`}
           className="grid size-4 place-items-center rounded-full text-subtle transition-colors hover:bg-[#dfddd3] hover:text-ink"
         >
@@ -138,20 +173,22 @@ export default function OwnerControl({
   }
 
   return (
-    <button
-      type="button"
-      onClick={startEditing}
-      aria-label={`Add an owner for ${merchant}`}
-      className={
-        variant === "flagged"
-          ? "inline-flex items-center gap-1 rounded-full border border-dashed border-[#e0b6b0] px-2.5 py-1 text-[11px] font-semibold text-flag transition-colors hover:border-flag hover:bg-flag-soft"
-          : "inline-flex items-center gap-1 rounded-full border border-dashed border-[#d8d5cb] px-2.5 py-1 text-[11px] font-semibold text-muted transition-colors hover:border-[#c3c0b4] hover:text-ink-soft"
-      }
-    >
-      <span aria-hidden="true" className="text-[13px] leading-none">
-        +
-      </span>
-      Add owner
-    </button>
+    <span ref={wrapperRef} className="inline-flex">
+      <button
+        type="button"
+        onClick={startEditing}
+        aria-label={`Add an owner for ${merchant}`}
+        className={
+          variant === "flagged"
+            ? "inline-flex items-center gap-1 rounded-full border border-dashed border-[#e0b6b0] px-2.5 py-1 text-[11px] font-semibold text-flag transition-colors hover:border-flag hover:bg-flag-soft"
+            : "inline-flex items-center gap-1 rounded-full border border-dashed border-[#d8d5cb] px-2.5 py-1 text-[11px] font-semibold text-muted transition-colors hover:border-[#c3c0b4] hover:text-ink-soft"
+        }
+      >
+        <span aria-hidden="true" className="text-[13px] leading-none">
+          +
+        </span>
+        Add owner
+      </button>
+    </span>
   );
 }

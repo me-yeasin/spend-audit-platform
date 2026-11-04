@@ -57,17 +57,24 @@ export function ownerFor(owners: OwnerMap, key: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-/** Every owner name already in use, alphabetically, for suggestions. */
+/**
+ * Every owner name already in use, alphabetically, for suggestions.
+ *
+ * Names are compared without regard to case, so "sam" and "Sam" are one
+ * person in the list. The first spelling seen is the one shown.
+ */
 export function knownOwners(owners: OwnerMap): string[] {
-  const names = new Set<string>();
+  const names = new Map<string, string>();
 
   for (const name of Object.values(owners)) {
     if (typeof name !== "string") continue;
     const trimmed = name.trim();
-    if (trimmed !== "") names.add(trimmed);
+    if (trimmed === "") continue;
+    const key = trimmed.toLowerCase();
+    if (!names.has(key)) names.set(key, trimmed);
   }
 
-  return [...names].sort((a, b) => a.localeCompare(b));
+  return [...names.values()].sort((a, b) => a.localeCompare(b));
 }
 
 /** The recurring charges that nobody owns yet. */

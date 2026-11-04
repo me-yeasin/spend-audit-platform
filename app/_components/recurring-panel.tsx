@@ -54,6 +54,7 @@ export default function RecurringPanel({
           <div className="flex items-baseline gap-2.5">
             <h2
               id="recurring-heading"
+              tabIndex={-1}
               className="text-[15px] font-semibold tracking-[-0.01em] text-ink"
             >
               Recurring charges

@@ -146,8 +146,7 @@ try {
   truthy("the owner name is shown on the row", namedRow?.includes("Sam"));
 
   // --------------------------------------------------- owner persists
-  console.log("\nowners survive a reload");
-  await page.reload({ waitUntil: "networkidle0" });
+  console.log("\nowners survive a reload");  await page.reload({ waitUntil: "networkidle0" });
   await drop(page, "statement-3-months.csv");
   await page.waitForSelector("[data-flagged-panel]", { timeout: 15000 });
   state = await probe(page);
@@ -158,8 +157,7 @@ try {
   truthy("it is stored in the browser", stored?.includes("Sam"));
 
   // ------------------------------------------------------ clear an owner
-  console.log("\nclearing an owner");
-  await page.evaluate(() => {
+  console.log("\nclearing an owner");  await page.evaluate(() => {
     document.querySelector('[data-recurring-group] [aria-label^="Remove "]').click();
   });
   await new Promise((resolve) => setTimeout(resolve, 250));
@@ -262,6 +260,145 @@ try {
   check("no charge is left without an owner", state.namedPills, 14);
   check("the recurring panel is untouched", state.groupCount, 14);
   await shot(page, "owners-all-assigned");
+
+  // ------------------------------------------------- the caret is kept
+  console.log("\nthe keyboard is not dropped");
+  // give two charges back their names, so two claims are waiting
+  await page.evaluate(() => {
+    const remove = [
+      ...document.querySelectorAll("[data-recurring-group] button[aria-label^='Remove ']"),
+    ];
+    remove[0].click();
+    remove[1].click();
+  });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  state = await probe(page);
+  check("two charges are waiting again", state.flaggedRows, 2);
+
+  await page.evaluate(() => {
+    document.querySelector('[data-flagged-panel] button[aria-label^="Add an owner"]').click();
+  });
+  await page.waitForFunction(
+    () => Boolean(document.querySelector('[data-flagged-panel] input[type="text"]:focus')),
+    { timeout: 5000 },
+  );
+  await page.keyboard.type("Alex");
+  await page.keyboard.press("Enter");
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  const movedFocus = await page.evaluate(() => {
+    const active = document.activeElement;
+    return {
+      tag: active?.tagName ?? null,
+      inFlagged: Boolean(active?.closest("[data-flagged-panel]")),
+    };
+  });
+  check("the caret lands on the next claim", movedFocus.inFlagged, true);
+  truthy("and it is a control, not the page", movedFocus.tag === "BUTTON");
+
+  // claiming the last one removes the section, so the caret must move on
+  await page.evaluate(() => {
+    document.querySelector('[data-flagged-panel] button[aria-label^="Add an owner"]').click();
+  });
+  await page.waitForFunction(
+    () => Boolean(document.querySelector('[data-flagged-panel] input[type="text"]:focus')),
+    { timeout: 5000 },
+  );
+  await page.keyboard.type("Alex");
+  await page.keyboard.press("Enter");
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  const finalFocus = await page.evaluate(() => ({
+    id: document.activeElement?.id ?? null,
+    onBody: document.activeElement === document.body,
+  }));
+  check("the caret leaves the vanished section", finalFocus.onBody, false);
+  check("and lands on the recurring charges", finalFocus.id, "recurring-heading");
+
+  // clicking away dismisses the editor
+  await page.evaluate(() => {
+    document.querySelector("[data-recurring-group] button[aria-label^='Remove ']").click();
+  });
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  await page.evaluate(() => {
+    document
+      .querySelectorAll("[data-recurring-group] button[aria-label^='Add an owner']")[0]
+      .click();
+  });
+  await page.waitForFunction(
+    () => Boolean(document.querySelector("[data-recurring-group] input[type='text']:focus")),
+    { timeout: 5000 },
+  );
+  await page.keyboard.type("Half typed");
+  await page.mouse.click(8, 8);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const dismissed = await page.evaluate(
+    () => document.querySelectorAll("[data-recurring-group] input[type='text']").length,
+  );
+  check("clicking away dismisses the editor", dismissed, 0);
+
+  // tabbing inside the editor must not dismiss it
+  await page.evaluate(() => {
+    document
+      .querySelectorAll("[data-recurring-group] button[aria-label^='Add an owner']")[0]
+      .click();
+  });
+  await page.waitForFunction(
+    () => Boolean(document.querySelector("[data-recurring-group] input[type='text']:focus")),
+    { timeout: 5000 },
+  );
+  await page.keyboard.press("Tab");
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const afterTab = await page.evaluate(() => {
+    const active = document.activeElement;
+    return {
+      editorOpen: document.querySelectorAll("[data-recurring-group] input[type='text']").length,
+      label: active?.getAttribute("aria-label") ?? null,
+      inControl: Boolean(active?.closest("[data-recurring-group]")),
+    };
+  });
+  check("tabbing inside keeps the editor open", afterTab.editorOpen, 1);
+  check("and the caret reaches the confirm button", afterTab.label?.includes("Save owner"), true);
+  check("inside the control", afterTab.inControl, true);
+
+  // tabbing out of the control closes it, and the caret is not lost
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const afterLeaving = await page.evaluate(() => ({
+    editorOpen: document.querySelectorAll("[data-recurring-group] input[type='text']").length,
+    onBody: document.activeElement === document.body,
+  }));
+  check("tabbing away closes the editor", afterLeaving.editorOpen, 0);
+  check("and the caret is not dropped on the page", afterLeaving.onBody, false);
+
+  // confirming must not park the caret on the destructive button
+  await page.evaluate(() => {
+    document
+      .querySelectorAll("[data-recurring-group] button[aria-label^='Add an owner']")[0]
+      .click();
+  });
+  await page.waitForFunction(
+    () => Boolean(document.querySelector("[data-recurring-group] input[type='text']:focus")),
+    { timeout: 5000 },
+  );
+  await page.keyboard.type("Robin");
+  await page.keyboard.press("Enter");
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const afterConfirm = await page.evaluate(() => {
+    const active = document.activeElement;
+    return {
+      label: active?.getAttribute("aria-label") ?? null,
+      onBody: document.activeElement === document.body,
+    };
+  });
+  check("the caret is not dropped after confirming", afterConfirm.onBody, false);
+  check(
+    "and it is not on the clear button",
+    afterConfirm.label?.startsWith("Remove ") ?? false,
+    false,
+  );
+  truthy("it lands on the name instead", afterConfirm.label?.includes("Robin") ?? false);
 
   // ------------------------------------------------------------- mobile
   console.log("\nmobile layout");

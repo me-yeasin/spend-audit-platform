@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { RecurringGroup } from "@/lib/detect-recurring";
 import { formatCost } from "@/lib/format";
 import OwnerControl from "./owner-control";
@@ -26,27 +27,43 @@ export default function FlaggedPanel({
   onAssign,
   onClear,
 }: FlaggedPanelProps) {
+  const sectionRef = useRef<HTMLElement>(null);
+  const keepFocus = useRef(false);
+
+  // A row that is claimed leaves the list, and the button under the caret
+  // leaves with it. Move the caret to the next claim instead of dropping it.
+  // When the last claim is made the section disappears altogether, and the
+  // caret belongs on the recurring charges below it.
+  useEffect(() => {
+    if (!keepFocus.current) return;
+    keepFocus.current = false;
+
+    const section = sectionRef.current;
+    if (section) {
+      const next = section.querySelector<HTMLButtonElement>(
+        'button[aria-label^="Add an owner"]',
+      );
+      (next ?? section.querySelector<HTMLElement>("h2"))?.focus();
+      return;
+    }
+
+    document.getElementById("recurring-heading")?.focus();
+  }, [groups.length]);
+
   if (groups.length === 0) return null;
 
   return (
     <section
+      ref={sectionRef}
       className="mx-auto w-full max-w-[900px]"
       aria-labelledby="flagged-heading"
       data-flagged-panel
     >
-      <div
-        role="status"
-        aria-live="polite"
-        className="sr-only"
-      >
-        {groups.length} recurring {groups.length === 1 ? "charge needs" : "charges need"} an owner.
-      </div>
-
-      <div className="rounded-[20px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(18,18,15,0.04),0_18px_44px_-30px_rgba(18,18,15,0.28)]">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6 sm:py-5">
+      <div className="rounded-[20px] border border-hairline bg-surface shadow-[0_1px_2px_rgba(18,18,15,0.04),0_18px_44px_-30px_rgba(18,18,15,0.28)]">        <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6 sm:py-5">
           <div className="flex items-baseline gap-2.5">
             <h2
               id="flagged-heading"
+              tabIndex={-1}
               className="text-[15px] font-semibold tracking-[-0.01em] text-ink"
             >
               Needs an owner
@@ -107,7 +124,10 @@ export default function FlaggedPanel({
                     roster={roster}
                     merchant={group.name}
                     variant="flagged"
-                    onSave={(name) => onAssign(group.key, name)}
+                    onSave={(name) => {
+                      keepFocus.current = true;
+                      onAssign(group.key, name);
+                    }}
                     onClear={() => onClear(group.key)}
                   />
                 </span>

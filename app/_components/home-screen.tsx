@@ -47,6 +47,16 @@ export default function HomeScreen() {
         </section>
       )}
 
+      {/* Announces the owner status as it changes, including the moment
+          every charge has been claimed and the section disappears. */}
+      <div role="status" aria-live="polite" className="sr-only">
+        {imp.recurring.length === 0
+          ? ""
+          : unowned.length === 0
+            ? "Every recurring charge has an owner."
+            : `${unowned.length} recurring ${unowned.length === 1 ? "charge needs" : "charges need"} an owner.`}
+      </div>
+
       {/* ---------------------------------------------------- upload card */}
       {inWorkspace && imp.phase === "ready" && imp.imported ? (
         <>
