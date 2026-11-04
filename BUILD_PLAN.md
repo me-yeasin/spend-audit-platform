@@ -67,10 +67,10 @@ To keep the application focused and useful, the following are intentionally excl
 1. **File upload** — done.
 2. **Transaction list** — done. Rows are grouped by month, newest first, with a sticky column header, a pinned range in the footer, and a two-line row layout on mobile. The parser handles quoted fields, currency symbols, separate debit/credit columns and several date formats; unreadable files say exactly which columns are missing.
 3. **Recurring charge detection** — done. A new panel sits above the transaction list, one row per charge that repeats: the merchant, how many payments it made, what it cost in total, and the typical monthly amount. Opening a row reveals the individual payments. A charge counts as recurring when the same merchant is paid at least three times, roughly a month apart, with a steady amount and no missing months. Calibrated against the fixtures: all 14 real recurring charges are found and none of the frequently repeated one-off spending is.
-4. **Owner flagging** — next.
-5. **Total monthly recurring cost**
-6. **No owner list**
-7. **Monthly re-run**
+4. **Owner flagging** — done. A "Needs an owner" section sits at the top of the workspace, listing every recurring charge nobody has claimed, with a red marker, the description, the total and the monthly amount. The user names an owner directly in that list and the charge leaves it. Every recurring charge also carries an owner control of its own: a dashed "+ Add owner" slot when unowned, a name pill once it has one. Names already used are offered as suggestions, so a second charge takes one click. Owners are kept in the browser's own storage, so they survive between months on the same device, and nothing leaves the computer.
+5. **Total monthly recurring cost** — next.
+6. **No owner list** — done. The "Needs an owner" section is that list: a separate, clearly visible section of every unassigned charge with its description and amount. Items stay in it until the user names an owner, and it disappears once every charge has one.
+7. **Monthly re-run** — the owners already carry over between months. What is left is showing one month against the next.
 8. **Clean, simple interface** — applied throughout, refined as each feature lands.
 ---
 ## Build order

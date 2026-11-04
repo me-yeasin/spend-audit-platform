@@ -120,6 +120,31 @@ const results = await page.evaluate(() => {
     add("recurring amount", amount);
     add("recurring per month", amount.nextElementSibling);
     add("recurring footer", recurring.querySelector("[data-panel-footer] p"));
+    const addOwner = recurringRow.querySelector('button[aria-label^="Add an owner"]');
+    add("add owner", addOwner);
+  }
+
+  // the flagged panel
+  const flagged = document.querySelector("[data-flagged-panel]");
+  if (flagged) {
+    add("flagged heading", flagged.querySelector("h2"));
+    add("flagged count", flagged.querySelector("h2 + span"));
+    add(
+      "flagged note",
+      [...flagged.querySelectorAll("p")].find((p) => p.textContent.includes("Nobody has claimed")),
+    );
+    const flaggedRow = flagged.querySelector("[data-flagged-row]");
+    const flaggedName = flaggedRow.querySelector("[data-flagged-name]");
+    add("flagged name", flaggedName);
+    add("flagged evidence", flaggedRow.querySelector("[data-flagged-evidence]"));
+    const flaggedAmount = flaggedRow.querySelector("[data-flagged-amount]");
+    add("flagged amount", flaggedAmount);
+    add("flagged per month", flaggedAmount.nextElementSibling);
+    add("flagged add owner", flaggedRow.querySelector('button[aria-label^="Add an owner"]'));
+    add(
+      "flagged footer",
+      [...flagged.querySelectorAll("p")].find((p) => p.textContent.includes("Name an owner")),
+    );
   }
 
   return samples;

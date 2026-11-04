@@ -4,11 +4,18 @@ import { useState } from "react";
 import { formatAmount, formatCost, formatDate } from "@/lib/format";
 import type { RecurringGroup } from "@/lib/detect-recurring";
 import { ChevronIcon } from "./icons";
+import OwnerControl from "./owner-control";
 
 type RecurringPanelProps = {
   groups: RecurringGroup[];
   /** Every transaction in the statement, for the footer line. */
   totalTransactions: number;
+  /** Names already in use, offered as suggestions. */
+  roster: string[];
+  /** The owner of a charge, or null when nobody owns it. */
+  ownerOf: (key: string) => string | null;
+  onAssign: (key: string, name: string) => void;
+  onClear: (key: string) => void;
 };
 
 /** Ids must not contain whitespace. */
@@ -19,6 +26,10 @@ function slug(key: string) {
 export default function RecurringPanel({
   groups,
   totalTransactions,
+  roster,
+  ownerOf,
+  onAssign,
+  onClear,
 }: RecurringPanelProps) {
   const [openKey, setOpenKey] = useState<string | null>(null);
 
@@ -82,46 +93,61 @@ export default function RecurringPanel({
                     data-recurring-group
                     className="border-b border-[#efeee7] last:border-0"
                   >
-                    <button
-                      type="button"
-                      onClick={() => toggle(group.key)}
-                      aria-expanded={open}
-                      aria-controls={paymentsId}
-                      className="flex w-full items-start gap-3 px-5 py-3.5 text-left transition-colors hover:bg-[#faf9f4] sm:h-16 sm:items-center sm:gap-4 sm:px-6 sm:py-0"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13.5px] font-semibold text-ink">
-                          {group.name}
+                    <div className="flex flex-col gap-3 px-5 py-3.5 sm:h-16 sm:flex-row sm:items-center sm:gap-4 sm:px-6 sm:py-0">
+                      <button
+                        type="button"
+                        onClick={() => toggle(group.key)}
+                        aria-expanded={open}
+                        aria-controls={paymentsId}
+                        className="flex w-full min-w-0 flex-1 items-start gap-3 text-left transition-colors hover:bg-[#faf9f4] sm:h-full sm:items-center sm:gap-4"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13.5px] font-semibold text-ink">
+                            {group.name}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11.5px] text-muted">
+                            {group.occurrences} payments · {formatCost(group.total)} total
+                            {group.varies ? " · varies" : ""}
+                          </span>
                         </span>
-                        <span className="mt-0.5 block truncate text-[11.5px] text-muted">
-                          {group.occurrences} payments · {formatCost(group.total)} total
-                          {group.varies ? " · varies" : ""}
-                        </span>
-                      </span>
 
-                      <span className="hidden shrink-0 items-center gap-2 sm:flex">
-                        <span className="rounded-full bg-[#f1f0e9] px-2 py-1 text-[10px] font-semibold text-muted">
-                          Monthly
+                        <span className="hidden shrink-0 items-center gap-2 sm:flex">
+                          <span className="rounded-full bg-[#f1f0e9] px-2 py-1 text-[10px] font-semibold text-muted">
+                            Monthly
+                          </span>
+                          {group.varies && (
+                            <span className="text-[10.5px] text-subtle">amount varies</span>
+                          )}
                         </span>
-                        {group.varies && (
-                          <span className="text-[10.5px] text-subtle">amount varies</span>
-                        )}
-                      </span>
 
-                      <span className="shrink-0 text-right">
-                        <span className="block text-[13.5px] font-semibold tabular-nums text-ink">
-                          {formatCost(group.monthlyAmount)}
+                        <span className="shrink-0 text-right">
+                          <span className="block text-[13.5px] font-semibold tabular-nums text-ink">
+                            {formatCost(group.monthlyAmount)}
+                          </span>
+                          <span className="mt-0.5 block text-[10.5px] text-subtle">
+                            per month
+                          </span>
                         </span>
-                        <span className="mt-0.5 block text-[10.5px] text-subtle">
-                          per month
-                        </span>
-                      </span>
 
-                      <ChevronIcon
-                        direction={open ? "down" : "right"}
-                        className="mt-1 shrink-0 text-subtle sm:mt-0"
-                      />
-                    </button>
+                        <ChevronIcon
+                          direction={open ? "down" : "right"}
+                          className="mt-1 shrink-0 text-subtle sm:mt-0"
+                        />
+                      </button>
+
+                      {/* The owner control sits beside the disclosure button,
+                          never inside it: a control inside a button would be
+                          unreachable by keyboard. */}
+                      <span className="shrink-0 sm:pl-1">
+                        <OwnerControl
+                          owner={ownerOf(group.key)}
+                          roster={roster}
+                          merchant={group.name}
+                          onSave={(name) => onAssign(group.key, name)}
+                          onClear={() => onClear(group.key)}
+                        />
+                      </span>
+                    </div>
 
                     {open && (
                       <div

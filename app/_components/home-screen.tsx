@@ -2,8 +2,11 @@
 
 import { LockIcon } from "./icons";
 import { useStatementImport } from "./use-statement-import";
+import { useOwners } from "./use-owners";
+import { unownedGroups } from "@/lib/owners";
 import UploadCard from "./upload-card";
 import FileChip from "./file-chip";
+import FlaggedPanel from "./flagged-panel";
 import RecurringPanel from "./recurring-panel";
 import TransactionsPanel from "./transactions-panel";
 import HowItWorks from "./how-it-works";
@@ -11,8 +14,11 @@ import ResultPreview from "./result-preview";
 
 export default function HomeScreen() {
   const imp = useStatementImport();
+  const { owners, roster, ownerOf, setOwner, clearOwner } = useOwners();
   const inWorkspace = imp.workspace;
   const showHero = !inWorkspace;
+
+  const unowned = unownedGroups(imp.recurring, owners);
 
   return (
     <main className="flex flex-1 flex-col items-center px-5 pt-14 pb-16 sm:px-8 sm:pt-20 sm:pb-20 lg:pt-[88px]">
@@ -55,12 +61,27 @@ export default function HomeScreen() {
           </section>
 
           {imp.transactions.length > 0 && (
-            <section className="mt-6 w-full sm:mt-8" aria-label="Recurring charges">
-              <RecurringPanel
-                groups={imp.recurring}
-                totalTransactions={imp.transactions.length}
-              />
-            </section>
+            <>
+              <section className="mt-6 w-full sm:mt-8" aria-label="Charges needing an owner">
+                <FlaggedPanel
+                  groups={unowned}
+                  roster={roster}
+                  onAssign={setOwner}
+                  onClear={clearOwner}
+                />
+              </section>
+
+              <section className="mt-6 w-full sm:mt-8" aria-label="Recurring charges">
+                <RecurringPanel
+                  groups={imp.recurring}
+                  totalTransactions={imp.transactions.length}
+                  roster={roster}
+                  ownerOf={ownerOf}
+                  onAssign={setOwner}
+                  onClear={clearOwner}
+                />
+              </section>
+            </>
           )}
 
           <section className="mt-6 w-full sm:mt-8" aria-label="Transactions">
@@ -93,10 +114,23 @@ export default function HomeScreen() {
           {/* Keep the previous results visible while a replacement is read. */}
           {inWorkspace && imp.transactions.length > 0 && (
             <>
+              <section className="mt-6 w-full sm:mt-8" aria-label="Charges needing an owner">
+                <FlaggedPanel
+                  groups={unowned}
+                  roster={roster}
+                  onAssign={setOwner}
+                  onClear={clearOwner}
+                />
+              </section>
+
               <section className="mt-6 w-full sm:mt-8" aria-label="Recurring charges">
                 <RecurringPanel
                   groups={imp.recurring}
                   totalTransactions={imp.transactions.length}
+                  roster={roster}
+                  ownerOf={ownerOf}
+                  onAssign={setOwner}
+                  onClear={clearOwner}
                 />
               </section>
 

@@ -76,13 +76,15 @@ const probe = (page) =>
   page.evaluate(() => {
     const panel = document.querySelector("[data-recurring-panel]");
     const groups = [...document.querySelectorAll("[data-recurring-group]")];
-    const buttons = groups.map((group) => group.querySelector("button"));
+    // the expand control is the one carrying aria-expanded — a group also
+    // holds the owner control, which is a button too
+    const buttons = groups.map((group) => group.querySelector("button[aria-expanded]"));
     return {
       hasPanel: Boolean(panel),
       heading: panel?.querySelector("h2")?.textContent?.trim() ?? null,
       count: groups.length,
       names: groups.map((group) =>
-        group.querySelector("button span span")?.textContent?.trim() ?? "",
+        group.querySelector("button[aria-expanded] span span")?.textContent?.trim() ?? "",
       ),
       firstRowText: groups[0]?.innerText.replace(/\s+/g, " ").trim() ?? null,
       footer: panel?.querySelector("[data-panel-footer]")?.innerText.replace(/\s+/g, " ").trim() ?? null,
@@ -123,7 +125,7 @@ try {
   check("Netflix is in the list", netflixIndex > -1, true);
   await page.evaluate((index) => {
     document
-      .querySelectorAll("[data-recurring-group] button")
+      .querySelectorAll("[data-recurring-group] button[aria-expanded]")
       [index].click();
   }, netflixIndex);
   await new Promise((resolve) => setTimeout(resolve, 250));
@@ -140,7 +142,7 @@ try {
   // collapse again
   await page.evaluate((index) => {
     document
-      .querySelectorAll("[data-recurring-group] button")
+      .querySelectorAll("[data-recurring-group] button[aria-expanded]")
       [index].click();
   }, netflixIndex);
   await new Promise((resolve) => setTimeout(resolve, 200));
@@ -165,12 +167,12 @@ try {
   // the id it points at must resolve while the group is open
   await page.evaluate((index) => {
     document
-      .querySelectorAll("[data-recurring-group] button")
+      .querySelectorAll("[data-recurring-group] button[aria-expanded]")
       [index].click();
   }, netflixIndex);
   await new Promise((resolve) => setTimeout(resolve, 250));
   const controls = await page.evaluate((index) => {
-    const button = document.querySelectorAll("[data-recurring-group] button")[index];
+    const button = document.querySelectorAll("[data-recurring-group] button[aria-expanded]")[index];
     const target = document.getElementById(button.getAttribute("aria-controls") ?? "");
     return {
       exists: Boolean(target),
@@ -192,7 +194,8 @@ try {
       return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), right: Math.round(r.right) };
     };
     return {
-      rowHeight: Math.round(button.getBoundingClientRect().height),
+      rowHeight: group.clientHeight,
+      buttonHeight: Math.round(button.getBoundingClientRect().height),
       chipVisible: chip.getBoundingClientRect().width > 0,
       name: box(name),
       amount: box(amount),
@@ -201,6 +204,7 @@ try {
     };
   });
   check("the desktop row is 64px tall", geometry.rowHeight, 64);
+  check("and the expand control fills it", geometry.buttonHeight, 64);
   check("the cadence chip is visible on desktop", geometry.chipVisible, true);
   check("the amount sits right of the name", geometry.amount.x > geometry.name.x, true);
   check("the chip sits between name and amount", geometry.chip.x > geometry.name.x, true);
@@ -213,7 +217,7 @@ try {
 
   await page.evaluate((index) => {
     document
-      .querySelectorAll("[data-recurring-group] button")
+      .querySelectorAll("[data-recurring-group] button[aria-expanded]")
       [index].click();
   }, netflixIndex);
   await new Promise((resolve) => setTimeout(resolve, 200));
