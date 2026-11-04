@@ -66,8 +66,8 @@ To keep the application focused and useful, the following are intentionally excl
 ## Build progress
 1. **File upload** — done.
 2. **Transaction list** — done. Rows are grouped by month, newest first, with a sticky column header, a pinned range in the footer, and a two-line row layout on mobile. The parser handles quoted fields, currency symbols, separate debit/credit columns and several date formats; unreadable files say exactly which columns are missing.
-3. **Recurring charge detection** — next.
-4. **Owner flagging**
+3. **Recurring charge detection** — done. A new panel sits above the transaction list, one row per charge that repeats: the merchant, how many payments it made, what it cost in total, and the typical monthly amount. Opening a row reveals the individual payments. A charge counts as recurring when the same merchant is paid at least three times, roughly a month apart, with a steady amount and no missing months. Calibrated against the fixtures: all 14 real recurring charges are found and none of the frequently repeated one-off spending is.
+4. **Owner flagging** — next.
 5. **Total monthly recurring cost**
 6. **No owner list**
 7. **Monthly re-run**

@@ -1,11 +1,8 @@
 // Dev-only: interaction checks — sticky header, truncation, focus rings.
 // Usage: node design/interactions.mjs [url]
 import puppeteer from "puppeteer-core";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
 
 const url = process.argv[2] ?? "http://localhost:4000";
-const here = path.dirname(fileURLToPath(import.meta.url));
 
 const CHROME =
   process.env.CHROME_PATH ??

@@ -4,6 +4,7 @@ import { LockIcon } from "./icons";
 import { useStatementImport } from "./use-statement-import";
 import UploadCard from "./upload-card";
 import FileChip from "./file-chip";
+import RecurringPanel from "./recurring-panel";
 import TransactionsPanel from "./transactions-panel";
 import HowItWorks from "./how-it-works";
 import ResultPreview from "./result-preview";
@@ -53,6 +54,15 @@ export default function HomeScreen() {
             />
           </section>
 
+          {imp.transactions.length > 0 && (
+            <section className="mt-6 w-full sm:mt-8" aria-label="Recurring charges">
+              <RecurringPanel
+                groups={imp.recurring}
+                totalTransactions={imp.transactions.length}
+              />
+            </section>
+          )}
+
           <section className="mt-6 w-full sm:mt-8" aria-label="Transactions">
             <TransactionsPanel
               transactions={imp.transactions}
@@ -82,14 +92,23 @@ export default function HomeScreen() {
 
           {/* Keep the previous results visible while a replacement is read. */}
           {inWorkspace && imp.transactions.length > 0 && (
-            <section className="mt-6 w-full sm:mt-8" aria-label="Transactions">
-              <TransactionsPanel
-                transactions={imp.transactions}
-                parseIssue={imp.parseIssue}
-                skippedRows={imp.skippedRows}
-                onChooseFile={imp.openPicker}
-              />
-            </section>
+            <>
+              <section className="mt-6 w-full sm:mt-8" aria-label="Recurring charges">
+                <RecurringPanel
+                  groups={imp.recurring}
+                  totalTransactions={imp.transactions.length}
+                />
+              </section>
+
+              <section className="mt-6 w-full sm:mt-8" aria-label="Transactions">
+                <TransactionsPanel
+                  transactions={imp.transactions}
+                  parseIssue={imp.parseIssue}
+                  skippedRows={imp.skippedRows}
+                  onChooseFile={imp.openPicker}
+                />
+              </section>
+            </>
           )}
         </>
       )}

@@ -102,6 +102,26 @@ const results = await page.evaluate(() => {
   add("chip name", chip.querySelector("p"));
   add("chip meta", chip.querySelectorAll("p")[1]);
 
+  // the recurring panel
+  const recurring = document.querySelector("[data-recurring-panel]");
+  if (recurring) {
+    add("recurring heading", recurring.querySelector("h2"));
+    add("recurring count", recurring.querySelector("h2 + span"));
+    add(
+      "recurring sort",
+      [...recurring.querySelectorAll("p")].find((p) => p.textContent.includes("Largest first")),
+    );
+    const recurringRow = recurring.querySelector("[data-recurring-group]");
+    const name = recurringRow.querySelector("button > span > span");
+    add("recurring name", name);
+    add("recurring evidence", name.nextElementSibling);
+    add("recurring cadence", recurringRow.querySelector("button .rounded-full"));
+    const amount = recurringRow.querySelector("button > span:last-of-type > span");
+    add("recurring amount", amount);
+    add("recurring per month", amount.nextElementSibling);
+    add("recurring footer", recurring.querySelector("[data-panel-footer] p"));
+  }
+
   return samples;
 });
 

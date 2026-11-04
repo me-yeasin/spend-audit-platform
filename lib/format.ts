@@ -52,6 +52,11 @@ export function formatAmount(amount: number) {
   return amount < 0 ? `-${abs}` : `+${abs}`;
 }
 
+/** "$1,850.00" — a cost, shown without a sign. */
+export function formatCost(amount: number) {
+  return currencyFormatter.format(Math.abs(amount));
+}
+
 export function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;

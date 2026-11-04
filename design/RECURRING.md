@@ -1,7 +1,8 @@
 # Recurring charge detection — design for approval
 
 Step 3 of the build plan: *find what repeats and group it*.
-Status: **proposed, awaiting approval.** No app code has been written for this step yet.
+Status: **approved and implemented** (see the commit history). The design below is
+what was built, with the one change noted in section 4.
 
 Diagrams:
 
@@ -116,6 +117,12 @@ Sensitivity — each threshold earns its place:
 The monthly amount is the **median** of the payments, so one odd month cannot skew it.
 The evidence line carries the total, which is what the plan asks this step to show.
 
+**One change from the diagram:** merchant names keep the casing the bank used, rather than
+being title cased. Automatic title casing turns "CVS" into "Cvs" and "APPLE ICLOUD+" into
+"Apple Icloud+", and a tool that handles money has no business renaming a merchant. The
+transaction list below already shows the same names in the same form, so the two agree.
+Only the noise is removed: store numbers, a trailing number and the trailing city or state.
+
 ### Expanded group
 
 Opening a row reveals its individual payments — date and amount — nested underneath. This is
@@ -141,10 +148,14 @@ The transaction list still renders below it.
 | --- | --- |
 | `lib/detect-recurring.ts` | **New.** Pure function: transactions → groups. No React, no DOM. |
 | `lib/parse-statement.ts` | Unchanged. |
-| `lib/format.ts` | Add `formatMonthLabel` if needed for group subtitles. |
-| `app/_components/recurring-panel.tsx` | **New.** Presentational panel. |
-| `app/_components/use-statement-import.ts` | Compute groups once per import, alongside the parse. |
-| `app/_components/home-screen.tsx` | Render the panel between the chip and the transaction list. |
+| `lib/format.ts` | Added `formatCost` — a cost shown without a sign. |
+| `app/_components/recurring-panel.tsx` | **New.** Presentational panel with expandable groups. |
+| `app/_components/use-statement-import.ts` | Computes the groups once per import, alongside the parse. |
+| `app/_components/home-screen.tsx` | Renders the panel between the chip and the transaction list. |
+| `app/_components/icons.tsx` | Added `ChevronIcon`. |
+| `design/qa-recurring.mjs` | **New.** Unit checks for the detector against the fixtures. |
+| `design/qa-recurring-panel.mjs` | **New.** Browser checks for the panel. |
+| `design/contrast.mjs` | Extended to cover the new panel's text. |
 
 The detector stays a pure module so it can be tested against the fixtures directly with Node,
 without a browser. That is how the calibration above is measured, and how the same file will be

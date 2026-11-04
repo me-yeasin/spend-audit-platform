@@ -5,6 +5,30 @@ const base = {
   focusable: "false",
 } as const;
 
+export function ChevronIcon({
+  className = "",
+  direction = "right",
+}: IconProps & { direction?: "right" | "down" }) {
+  return (
+    <svg
+      className={`${className} ${direction === "down" ? "rotate-90" : ""}`.trim()}
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      {...base}
+    >
+      <path
+        d="M4.5 2.75 7.75 6l-3.25 3.25"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function LockIcon({ className = "" }: IconProps) {
   return (
     <svg

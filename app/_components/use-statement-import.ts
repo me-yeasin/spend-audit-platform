@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatBytes } from "@/lib/format";
+import { detectRecurring, type RecurringGroup } from "@/lib/detect-recurring";
 import { parseStatement, type Transaction } from "@/lib/parse-statement";
 
 export type ImportPhase = "idle" | "reading" | "ready" | "error";
@@ -61,6 +62,7 @@ export function useStatementImport() {
   const [imported, setImported] = useState<ImportedFile | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [recurring, setRecurring] = useState<RecurringGroup[]>([]);
   const [skippedRows, setSkippedRows] = useState(0);
   const [parseIssue, setParseIssue] = useState<ParseIssue>(null);
   const [workspace, setWorkspace] = useState(false);
@@ -105,6 +107,7 @@ export function useStatementImport() {
       const finish = () => {
         if (result.status === "ok" || result.status === "empty") {
           setTransactions(result.transactions);
+          setRecurring(detectRecurring(result.transactions).groups);
           setSkippedRows(result.skippedRows);
           setParseIssue(null);
           setImported({
@@ -114,6 +117,7 @@ export function useStatementImport() {
           });
         } else {
           setTransactions([]);
+          setRecurring([]);
           setSkippedRows(0);
           setParseIssue({ reason: result.reason });
           setImported({ name: file.name, sizeLabel: formatBytes(file.size), rows: 0 });
@@ -193,6 +197,7 @@ export function useStatementImport() {
     setImported(null);
     setProblem(null);
     setTransactions([]);
+    setRecurring([]);
     setSkippedRows(0);
     setParseIssue(null);
     setWorkspace(false);
@@ -210,6 +215,7 @@ export function useStatementImport() {
     imported,
     problem,
     transactions,
+    recurring,
     skippedRows,
     parseIssue,
     workspace,
