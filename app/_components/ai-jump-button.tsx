@@ -74,7 +74,6 @@ export default function AiJumpButton() {
         aria-hidden={!visible}
         tabIndex={visible ? 0 : -1}
         data-ai-jump
-        data-animated-border
         className={[
           "relative flex items-center gap-2 rounded-full border border-hairline bg-surface py-2.5 pl-3 pr-4 text-[12.5px] font-semibold text-ink shadow-[0_2px_6px_rgba(18,18,15,0.08),0_18px_44px_-24px_rgba(18,18,15,0.45)] transition-all duration-200",
           "hover:border-[#cfccc0] hover:bg-[#fafaf6]",
@@ -82,42 +81,17 @@ export default function AiJumpButton() {
         ].join(" ")}
       >
         {/* Animated snake border using gradient */}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-full"
-          style={{
-            padding: "2px",
-            background: `linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
-                         conic-gradient(from var(--border-angle, 0deg), transparent 0%, #0E7C5A 10%, transparent 20%) border-box`,
-            border: "2px solid transparent",
-            WebkitMask: "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-            WebkitMaskComposite: "xor",
-            maskComposite: "exclude",
-            animation: visible ? "rotate-border 3s linear infinite" : "none",
-          }}
-        />
+        {visible && (
+          <span
+            aria-hidden="true"
+            className="snake-border pointer-events-none absolute inset-0 rounded-full"
+          />
+        )}
         <span className="grid size-6 place-items-center rounded-full bg-accent-soft text-accent">
           <SparkIcon className="size-[13px]" />
         </span>
         AI cut list
       </button>
-
-      <style jsx>{`
-        @property --border-angle {
-          syntax: "<angle>";
-          initial-value: 0deg;
-          inherits: false;
-        }
-
-        @keyframes rotate-border {
-          0% {
-            --border-angle: 0deg;
-          }
-          100% {
-            --border-angle: 360deg;
-          }
-        }
-      `}</style>
     </div>
   );
 }

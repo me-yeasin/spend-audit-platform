@@ -94,9 +94,34 @@ export function chatCompletionsUrl(baseUrl: string): string {
   return base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
 }
 
-export type AiProviderTest =
-  | { ok: true; reply: string }
-  | { ok: false; message: string };
+// --------------------------------------------------------------- transport
+
+export type ChatRole = "system" | "user" | "assistant";
+
+export type ChatMessage = {
+  role: ChatRole;
+  content: string;
+};
+
+export type ChatErrorCode =
+  | "auth"
+  | "http"
+  | "model"
+  | "network"
+  | "timeout"
+  | "format"
+  | "aborted";
+
+export type ChatOutcome =
+  | { ok: true; content: string }
+  | { ok: false; code: ChatErrorCode; message: string };
+
+export type ChatRequestOptions = {
+  /** How long the provider may take before the request is abandoned. */
+  timeoutMs?: number;
+  /** Caller-side cancellation, e.g. the user pressing Stop. */
+  signal?: AbortSignal;
+};
 
 function parseBody(raw: string): unknown {
   if (raw.trim() === "") return null;
@@ -122,7 +147,8 @@ function providerMessage(data: unknown): string | null {
   return null;
 }
 
-function providerReply(data: unknown): string | null {
+/** Read a chat reply, tolerating the part-array form some providers use. */
+function replyFrom(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
 
   const choices = (data as { choices?: unknown }).choices;
@@ -132,73 +158,138 @@ function providerReply(data: unknown): string | null {
   if (!first || typeof first !== "object") return null;
 
   const message = (first as { message?: unknown }).message;
-  if (!message || typeof message !== "object") return null;
+  if (message && typeof message === "object") {
+    const content = (message as { content?: unknown }).content;
+    if (typeof content === "string") return content;
+    if (Array.isArray(content)) {
+      const parts = content
+        .filter(
+          (part): part is { text: string } =>
+            Boolean(part) && typeof part === "object" && typeof (part as { text?: unknown }).text === "string",
+        )
+        .map((part) => part.text);
+      if (parts.length > 0) return parts.join("\n");
+    }
+  }
 
-  const content = (message as { content?: unknown }).content;
-  return typeof content === "string" ? content.trim() : null;
+  // Older completion-style providers put the text at choices[].text.
+  const text = (first as { text?: unknown }).text;
+  return typeof text === "string" ? text : null;
+}
+
+function errorForStatus(status: number): ChatErrorCode {
+  if (status === 401 || status === 403) return "auth";
+  if (status === 404) return "model";
+  return "http";
 }
 
 /**
- * Prove the provider answers before anything is saved.
+ * One chat-completions request to the user's provider.
  *
- * The request is deliberately plain — model and one message, nothing else.
- * Reasoning models reject sampling settings and token caps that older models
- * accept, so leaving them out keeps every compatible provider working.
+ * The body is deliberately plain — model and messages, nothing else. Reasoning
+ * models reject sampling settings and token caps that older models accept, so
+ * leaving them out keeps every compatible provider working.
  */
-export async function testAiProvider(config: AiProviderConfig): Promise<AiProviderTest> {
+export async function requestChatCompletion(
+  config: AiProviderConfig,
+  messages: ChatMessage[],
+  options: ChatRequestOptions = {},
+): Promise<ChatOutcome> {
+  const baseUrl = normaliseBaseUrl(config.baseUrl);
+  const model = config.modelId.trim();
+  if (baseUrl === "" || model === "") {
+    return { ok: false, code: "http", message: "The provider is not configured." };
+  }
+  if (options.signal?.aborted) {
+    return { ok: false, code: "aborted", message: "The request was stopped." };
+  }
+
   const key = config.apiKey.trim();
+  const timeoutMs = options.timeoutMs ?? 30_000;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20_000);
+  let timedOut = false;
+
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  const stop = () => controller.abort();
+  options.signal?.addEventListener("abort", stop, { once: true });
 
   try {
-    const response = await fetch(chatCompletionsUrl(config.baseUrl), {
+    const response = await fetch(chatCompletionsUrl(baseUrl), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         ...(key === "" ? {} : { Authorization: `Bearer ${key}` }),
       },
       body: JSON.stringify({
-        model: config.modelId.trim(),
-        messages: [{ role: "user", content: "Reply with the single word: connected" }],
+        model,
+        messages,
         stream: false,
       }),
       signal: controller.signal,
     });
 
-    const body = parseBody(await response.text());
+    const data = parseBody(await response.text());
 
     if (!response.ok) {
       return {
         ok: false,
+        code: errorForStatus(response.status),
         message:
-          providerMessage(body) ??
+          providerMessage(data) ??
           `The provider answered with HTTP ${response.status}.`,
       };
     }
 
-    const reply = providerReply(body);
-    if (reply === null) {
+    const content = replyFrom(data);
+    if (content === null) {
       return {
         ok: false,
+        code: "format",
         message:
           "The provider answered, but not with a chat completion. Check that the base URL ends in /v1 and that the model ID exists.",
       };
     }
 
-    return { ok: true, reply };
+    return { ok: true, content };
   } catch {
-    if (controller.signal.aborted) {
+    if (options.signal?.aborted) {
+      return { ok: false, code: "aborted", message: "The request was stopped." };
+    }
+    if (timedOut) {
       return {
         ok: false,
-        message: "The provider took longer than 20 seconds to answer.",
+        code: "timeout",
+        message: `The provider took longer than ${Math.round(timeoutMs / 1000)} seconds to answer.`,
       };
     }
     return {
       ok: false,
+      code: "network",
       message:
         "Could not reach the provider. Check the base URL, and whether it allows requests from a browser (CORS).",
     };
   } finally {
     clearTimeout(timer);
+    options.signal?.removeEventListener("abort", stop);
   }
+}
+
+export type AiProviderTest =
+  | { ok: true; reply: string }
+  | { ok: false; message: string };
+
+/** Prove the provider answers before the audit asks it for anything real. */
+export async function testAiProvider(config: AiProviderConfig): Promise<AiProviderTest> {
+  const outcome = await requestChatCompletion(
+    config,
+    [{ role: "user", content: "Reply with the single word: connected" }],
+    { timeoutMs: 20_000 },
+  );
+
+  if (!outcome.ok) return { ok: false, message: outcome.message };
+  return { ok: true, reply: outcome.content.trim() };
 }

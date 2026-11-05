@@ -22,6 +22,46 @@
   --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 }
 
+/* Snake border animation */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes snake-border {
+  0% {
+    --border-angle: 0deg;
+  }
+  100% {
+    --border-angle: 360deg;
+  }
+}
+
+.snake-border {
+  padding: 2px;
+  background: linear-gradient(var(--color-surface), var(--color-surface)) padding-box,
+              conic-gradient(from var(--border-angle, 0deg), transparent 0%, #0E7C5A 8%, transparent 16%) border-box;
+  border: 2px solid transparent;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: snake-border 3s linear infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.loading-shimmer {
+  animation: loading-shimmer 1.5s ease-in-out infinite;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
