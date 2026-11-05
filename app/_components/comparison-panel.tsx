@@ -1,7 +1,7 @@
 "use client";
 
-import { formatCost, formatCostSpoken } from "@/lib/format";
-import type { ChargeChange, MonthComparison } from "@/lib/history";
+import { formatCost, formatCostSpoken } from "../../lib/format";
+import type { ChargeChange, MonthComparison } from "../../lib/history";
 
 export type StripMonth = {
   month: string;

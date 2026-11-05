@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatAmount, formatDate, formatMonth, formatRange } from "@/lib/format";
-import type { Transaction } from "@/lib/parse-statement";
+import { formatAmount, formatDate, formatMonth, formatRange } from "../../lib/format";
+import type { Transaction } from "../../lib/parse-statement";
 import type { ParseIssue } from "./use-statement-import";
 
 /** Typical statements show in full; unusually large ones page in. */

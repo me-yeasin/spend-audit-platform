@@ -12,7 +12,7 @@ import {
   type AiProviderConfig,
   type AiProviderErrors,
   type AiProviderField,
-} from "@/lib/ai-provider";
+} from "../../lib/ai-provider";
 
 type TestState =
   | { kind: "idle" }

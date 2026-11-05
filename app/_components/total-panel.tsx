@@ -1,7 +1,7 @@
 "use client";
 
-import { formatCost } from "@/lib/format";
-import type { RecurringTotal } from "@/lib/total";
+import { formatCost } from "../../lib/format";
+import type { RecurringTotal } from "../../lib/total";
 
 /**
  * Why there is nothing to total, when there is nothing.

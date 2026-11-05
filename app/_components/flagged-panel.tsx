@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { RecurringGroup } from "@/lib/detect-recurring";
-import { formatCost } from "@/lib/format";
+import type { RecurringGroup } from "../../lib/detect-recurring";
+import { formatCost } from "../../lib/format";
 import OwnerControl from "./owner-control";
 
 type FlaggedPanelProps = {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { formatAmount, formatCost, formatDate } from "@/lib/format";
-import type { RecurringGroup } from "@/lib/detect-recurring";
-import { sumMonthly } from "@/lib/total";
+import { formatAmount, formatCost, formatDate } from "../../lib/format";
+import type { RecurringGroup } from "../../lib/detect-recurring";
+import { sumMonthly } from "../../lib/total";
 import { ChevronIcon } from "./icons";
 import OwnerControl from "./owner-control";
 
