@@ -55,9 +55,11 @@ who has not claimed it → here is the list it came from → here is the raw dat
 
 ### What it is
 
-The sum of the **median monthly amount** of every detected recurring charge —
-the same figure each row of the Recurring charges panel already shows in its
-"per month" column.
+The sum of the **newest payment** of every detected recurring charge — the same
+figure each row of the Recurring charges panel already shows in its "per month"
+column. "Newest" means the last payment in the charge's own history, not the
+last payment in the file: a charge paid in August, September and October
+contributes what it cost in October.
 
 ```ts
 monthly = Σ group.monthlyAmount   // rounded to cents
@@ -66,11 +68,11 @@ monthly = Σ group.monthlyAmount   // rounded to cents
 With the test fixtures (`test-data/statement-3-months.csv`, 62 transactions) it
 reads:
 
-| Charge | Median monthly |
+| Charge | Newest payment |
 | --- | ---: |
 | CITY APARTMENTS RENT | $1,850.00 |
 | GEICO AUTO INSURANCE | $128.50 |
-| CITY POWER & WATER | $123.40 |
+| CITY POWER & WATER | $126.10 |
 | VERIZON WIRELESS | $85.00 |
 | ADOBE CREATIVE CLOUD | $59.99 |
 | AMAZON WEB SERVICES | $42.30 |
@@ -82,15 +84,35 @@ reads:
 | SPOTIFY AB | $11.99 |
 | GOOGLE ONE | $2.99 |
 | APPLE ICLOUD+ | $2.99 |
-| **Total** | **$2,401.64** |
+| **Total** | **$2,404.34** |
 
-14 charges. The same figure comes out of the 12-month fixture, because the two
-statements hold the same subscriptions — a useful property, not a coincidence:
-the tool measures the standing monthly cost, not the cost of the file you
+14 charges. The same figure comes out of the 12-month fixture, because both
+statements end on the same October payment for every charge — the 12-month file
+is the same subscriptions with nine more months behind them. That is the point:
+the tool measures what these charges cost now, not an average over the file you
 happened to upload.
 
 `CITY POWER & WATER` is the only charge whose amount moves (120.70 → 123.40 →
-126.10). Its median is $123.40, which is what the total uses.
+126.10). Its newest payment is $126.10, which is what the total uses. A median
+would have reported $123.40 — the price the user paid two months ago, on the
+one charge whose price had just changed.
+
+### Why the newest payment
+
+The median was chosen because it is stable: one odd month cannot skew it, and
+the total is the same whether the file covers three months or twelve. That
+stability is bought with a lag, and the lag lands on the worst possible charge.
+A charge that was $123.40 for months and is $126.10 now still contributes
+$123.40 to a median-based total, so the headline reports what the user paid a
+month ago on the one charge whose price just moved — the exact charge they came
+to look at.
+
+The newest payment is what the user means by "what do I pay a month": what each
+of these cost the last time it was paid, not a statistic over a window they did
+not choose. It is also the same basis the monthly comparison uses
+(`design/MONTHLY.md` §4), so the headline and the "compared with last month"
+figure are the same kind of number and cannot disagree. The two-totals trap of
+§10.3 is avoided by construction rather than by luck.
 
 ### Why it is the sum of the rows
 
@@ -115,7 +137,7 @@ be able to produce two different answers to "what do I pay every month".
 
 ```
 Total monthly recurring cost
-$2,401.64  per month
+$2,404.34  per month
 across 14 recurring charges
 ```
 
@@ -123,8 +145,8 @@ With unclaimed money:
 
 ```
 Total monthly recurring cost
-$2,401.64  per month
-across 14 recurring charges · $451.15 per month has no owner
+$2,404.34  per month
+across 14 recurring charges · $453.85 per month has no owner
 ```
 
 The separator is `·` (middle dot, U+00B7) with a space either side.
@@ -140,7 +162,7 @@ It is deliberately **not** shown in the starting state, where nothing has been
 assigned yet. There the line would read
 
 ```
-across 14 recurring charges · $2,401.64 per month has no owner
+across 14 recurring charges · $2,404.34 per month has no owner
 ```
 
 which prints the headline figure twice in a row and reads like a mistake
@@ -153,7 +175,7 @@ user is actually looking for.
 
 ### 4.2 Every charge has an owner
 
-The `· $451.15 per month has no owner` clause disappears entirely. The line ends
+The `· $453.85 per month has no owner` clause disappears entirely. The line ends
 at `across 14 recurring charges`. Nothing replaces it — there is no "all
 claimed" badge, no tick, no green. Green is reserved for income, and the
 absence of a flag is not a thing that needs celebrating. The disappearance of
@@ -162,20 +184,40 @@ nothing left to do.
 
 ### 4.3 No recurring charges
 
+There are two empty states, and they have different causes. Both are calm, both
+explain themselves, and neither ever shows `$0.00`.
+
+**Not enough history** — fewer than three months on file. The heading is
+`No recurring charges yet`, and the body depends on how much is on file:
+
+```
+Total monthly recurring cost
+No recurring charges yet
+One month is not enough to tell a repeat from a one-off. November 2026 is saved — two more months and this becomes a number.
+```
+
+```
+Total monthly recurring cost
+No recurring charges yet
+Two months are on file. One more month of payments and we can name your recurring charges. Nothing here is wrong.
+```
+
+**Nothing repeats** — three or more months on file, and nothing in them repeats
+three times:
+
 ```
 Total monthly recurring cost
 No recurring charges found
-Nothing repeats in this statement yet, so there is nothing to total.
+Nothing repeats in this history yet, so there is nothing to total.
 ```
 
 Deliberately **not** `$0.00`. `$0.00 per month` is a claim: it says you pay
-nothing. The truth is that the statement did not contain enough repetition for
-the detector to be confident, which is a different statement entirely. The
-Recurring charges panel already uses the same wording
-(`No recurring charges found`, `app/_components/recurring-panel.tsx:78`), so the
-two sections agree in voice.
+nothing. The truth is that the history did not contain enough repetition for the
+detector to be confident, which is a different statement entirely. The Recurring
+charges panel already uses the same wording (`No recurring charges found`,
+`app/_components/recurring-panel.tsx:78`), so the two sections agree in voice.
 
-The empty state keeps the same label, the same card, the same padding. Only the
+The empty states keep the same label, the same card, the same padding. Only the
 content changes. The card never collapses or disappears — its position at the
 top of the workspace is structural.
 
@@ -184,7 +226,7 @@ top of the workspace is structural.
 The Recurring charges panel footer carries the same number, on the right:
 
 ```
-14 recurring charges grouped from 62 transactions        $2,401.64 per month in total
+14 recurring charges grouped from 62 transactions across 3 saved months    $2,404.34 per month in total
 ```
 
 Left in subtle (11.5px), right in ink-soft with the amount in semibold
@@ -199,15 +241,18 @@ For reference, the exact strings, with the separator marked:
 | Slot | String |
 | --- | --- |
 | Label | `Total monthly recurring cost` |
-| Figure | `$2,401.64` (from `formatCost`, en-US USD, always two decimals) |
+| Figure | `$2,404.34` (from `formatCost`, en-US USD, always two decimals) |
 | Unit | `per month` |
 | Context | `across 14 recurring charges` |
 | Separator | `·` |
-| Unclaimed | `$451.15 per month has no owner` — only when some charges are owned and some are not |
-| Empty heading | `No recurring charges found` |
-| Empty body | `Nothing repeats in this statement yet, so there is nothing to total.` |
-| Footer left | `14 recurring charges grouped from 62 transactions` |
-| Footer right | `$2,401.64 per month in total` |
+| Unclaimed | `$453.85 per month has no owner` — only when some charges are owned and some are not |
+| Empty heading (not enough history) | `No recurring charges yet` |
+| Empty body (one month) | `One month is not enough to tell a repeat from a one-off. {Month Year} is saved — two more months and this becomes a number.` |
+| Empty body (two months) | `Two months are on file. One more month of payments and we can name your recurring charges. Nothing here is wrong.` |
+| Empty heading (nothing repeats) | `No recurring charges found` |
+| Empty body (nothing repeats) | `Nothing repeats in this history yet, so there is nothing to total.` |
+| Footer left | `14 recurring charges grouped from 62 transactions across 3 saved months` |
+| Footer right | `$2,404.34 per month in total` |
 
 ---
 
@@ -242,7 +287,7 @@ month" sit on the same baseline (`flex items-baseline gap-2`). "per month" is
 read as a caption, large enough not to look like a footnote.
 
 **Tabular figures.** `tabular-nums` on the figure, on the footer amount and on
-the row amounts. Without it the digits of `$2,401.64` shift sideways when the
+the row amounts. Without it the digits of `$2,404.34` shift sideways when the
 number changes on a new upload (a `1` is narrower than a `2` in a proportional
 font), and a headline that visibly jitters when the file changes reads as
 unstable.
@@ -293,7 +338,7 @@ The gap between the label and the figure is `mt-1.5` (6px); between the figure
 and the context line `mt-2.5` (10px). The figure's own `leading-[1.1]` keeps
 its line box tight so the card does not feel airy. At 320px the card is 280px
 wide and the label, the figure and the context line stack — the figure and
-"per month" stay on one line because `$2,401.64 per month` at 32px is about
+"per month" stay on one line because `$2,404.34 per month` at 32px is about
 202px, inside the 240px of content width.
 
 ---
@@ -307,15 +352,15 @@ The figure is a `<span>` inside a `<p>`, inside a `<section>` labelled by the
 real heading at level 2, so screen readers announce "Total monthly recurring
 cost, heading level 2" and the number follows in the same region.
 
-The DOM order is: label (h2) → `$2,401.64` → `per month` → `across 14
+The DOM order is: label (h2) → `$2,404.34` → `per month` → `across 14
 recurring charges`. Read linearly, that is "Total monthly recurring cost, two
-thousand four hundred one dollars and sixty-four cents, per month, across
+thousand four hundred four dollars and thirty-four cents, per month, across
 fourteen recurring charges" — a complete sentence with no markup needed.
 
 **The figure is a currency amount, and it is read as one.** `formatCost` uses
 `Intl.NumberFormat("en-US", { style: "currency", currency: "USD",
 minimumFractionDigits: 2, maximumFractionDigits: 2 })`, so the text is
-`$2,401.64` — a symbol, a grouped integer and two decimals. Screen readers
+`$2,404.34` — a symbol, a grouped integer and two decimals. Screen readers
 announce that as a currency amount. `Math.abs` is applied, so the value is
 always positive and never carries a `+` or `−` sign; the direction of the money
 comes from the context, not from a sign.
@@ -338,14 +383,14 @@ one for what still needs an owner:
 `role="status"` implies `aria-live="polite"`, so neither ever interrupts the
 user. The first reads:
 
-> "62 transactions loaded, newest first. 14 recurring charges, $2,401.64 per
-> month."
+> "62 transactions loaded, newest first. 14 recurring charges across 3 saved
+> months, $2,404.34 per month. Up $2.70 from September 2026."
 
 and the second:
 
 > "14 recurring charges need an owner."
 
-The announcements are full sentences, not bare numbers: "$2,401.64" with no
+The announcements are full sentences, not bare numbers: "$2,404.34" with no
 unit and no count is much harder to act on when heard without the screen.
 
 **Why the regions live outside the panels.** A live region is only reliably
@@ -377,7 +422,7 @@ heading. No two landmarks on the page share a name, which is checked by
 
 It is a `<span class="text-flag">` inside the context paragraph — one text
 node, no separate list, no role. It is read inline: "across 14 recurring
-charges, $451.15 per month has no owner." The red is a reinforcement, not the
+charges, $453.85 per month has no owner." The red is a reinforcement, not the
 message; the words carry it.
 
 ### Keyboard and pointer
@@ -399,7 +444,8 @@ would delay the live-region announcement.
 
 | Situation | What the card shows |
 | --- | --- |
-| No recurring charges found | `No recurring charges found` + `Nothing repeats in this statement yet, so there is nothing to total.` |
+| Fewer than three months on file, nothing repeats | `No recurring charges yet` + the one-month or two-month body from §4.3 |
+| Three or more months on file, nothing repeats | `No recurring charges found` + `Nothing repeats in this history yet, so there is nothing to total.` |
 | Recurring charges found, none assigned yet | Figure + `per month` + `across N recurring charges` |
 | Recurring charges found, all owned | Figure + `per month` + `across N recurring charges` |
 | Recurring charges found, some unowned | Figure + `per month` + `across N recurring charges · $X per month has no owner` |
@@ -411,8 +457,11 @@ unclaimed figure says nothing that the "Needs an owner" list below does not
 already say more clearly. The clause appears at the point where it starts
 describing a *part* of the bill rather than all of it.
 
-The empty state is calm and honest: it names what was looked for and says why
-there is no number, without apologising and without a false zero.
+The empty states are calm and honest: they name what was looked for and say why
+there is no number, without apologising and without a false zero. The cause is
+part of the message — "not enough history yet" and "enough history and nothing
+repeats" are different answers, and the user should not have to guess which one
+they are looking at.
 
 ---
 
@@ -450,7 +499,7 @@ meets:
 
 **The one case I would change.** On a fresh import, before anybody has claimed
 anything, the unowned figure *equals* the headline: the card reads "across 14
-recurring charges · $2,401.64 per month has no owner", which prints the same
+recurring charges · $2,404.34 per month has no owner", which prints the same
 number twice on one line and says nothing the count does not already imply.
 The clause should be suppressed when the unowned amount equals the total
 (nothing claimed yet) — it carries no information there, and the "Needs an
@@ -490,7 +539,7 @@ widget as well.
 
 **Applied here:** the figure is never alone. It sits under the label "Total
 monthly recurring cost", it is followed by the unit "per month", and it is
-followed by a count. A user who sees only "$2,401.64" learns nothing; a user
+followed by a count. A user who sees only "$2,404.34" learns nothing; a user
 who sees the whole card learns everything.
 
 ### 2. Secondary figures exist, but they live one level down, and they are defined in words
@@ -507,7 +556,7 @@ the current month.
 > — <https://help.copilot.money/en/articles/6918427-understanding-key-metrics-for-spending>
 
 **Applied here:** our one secondary figure (the unclaimed amount) is defined by
-its own sentence — "$451.15 per month has no owner" — rather than being left
+its own sentence — "$453.85 per month has no owner" — rather than being left
 for the reader to interpret. It is not a percentage or a trend, both of which
 need explanation.
 
@@ -641,14 +690,17 @@ own support forum, which was reachable, and make no claim about type scale.
 6. **`formatCost` is fixed to en-US USD** while dates use en-GB
    ("27 Oct 2026"). Consistent with the no-multi-currency scope, but the mix is
    visible.
-7. **The total is a median, not a true monthly rate.** A charge that repeats
-   every month but grew every month (120.70 → 123.40 → 126.10) contributes its
-   median ($123.40) to a total that will actually be $126.10 next month. The
-   sum is honest about the *current* standing cost, not a forecast.
-8. **The total is only as good as the detector.** A charge that repeats twice a
-   month, or whose amount drifts more than 4% between payments, is not counted.
-   The card says "14 recurring charges", not "your monthly commitments", and
-   the label "recurring cost" is doing real work in that sentence.
+7. **The total is the newest payment, not a rate.** A charge that repeats every
+   month but grew every month (120.70 → 123.40 → 126.10) contributes $126.10,
+   which is what the user pays now. The sum is a snapshot of the newest month,
+   not a forecast and not a smoothed average: it moves the month a price moves.
+   That is the intended behaviour (`design/MONTHLY.md` §4), and it is why the
+   headline and the monthly comparison can never disagree.
+8. **The total is only as good as the detector.** A charge with fewer than three
+   payments, or whose amount moves by more than 4% more than once, is not
+   counted (`design/MONTHLY.md` §5 allows one price change and no more). The
+   card says "14 recurring charges", not "your monthly commitments", and the
+   label "recurring cost" is doing real work in that sentence.
 9. **The unclaimed figure depends on browser local storage.** On a new device
    nothing is claimed yet, so the clause is not shown at all — see §4.1 for why
    it is suppressed in that state.
@@ -665,10 +717,11 @@ own support forum, which was reachable, and make no claim about type scale.
 - Should the total appear in the page title or a meta description? Probably
   not — it is per-user and local — but worth a decision.
 - Is there a case for showing the **previous** month's total next to this one
-  ("$2,401.64, up $42.10 from last month")? That is step 7, monthly re-run,
-  and it needs a place to live that does not crowd this card. The honest answer
-  from the research is that it belongs in its own comparison, not as a second
-  figure here.
+  ("$2,404.34, up $2.70 from last month")? Step 7, the monthly re-run, is now
+  built (`design/MONTHLY.md`), and it answers the question without crowding this
+  card: the comparison is its own panel directly underneath, and it uses the
+  same newest-payment basis as the headline, so the two figures are the same
+  kind of number. The card itself stays one figure.
 - Should the unclaimed clause be dropped entirely if research with real users
   says people read it as a second headline? The research here is desk research
   only; no user testing has been done.

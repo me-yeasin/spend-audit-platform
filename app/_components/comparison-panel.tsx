@@ -41,7 +41,7 @@ function spokenRow(change: ChargeChange): string {
     return `${change.name}, ${before}, no longer charged, down ${before}.`;
   }
 
-  const moved = Math.round((change.after - change.before) * 100) / 100;
+  const moved = change.difference;
   const direction =
     moved > 0
       ? `up ${formatCostSpoken(moved)}`

@@ -1,4 +1,5 @@
-// Dev-only: WCAG contrast check for the transaction panel text.
+// Dev-only: WCAG contrast check for the workspace text — the transaction list,
+// the recurring and flagged panels, the headline, and the comparison panel.
 // Usage: node design/contrast.mjs [url]
 import puppeteer from "puppeteer-core";
 import { readFile } from "node:fs/promises";
@@ -155,7 +156,54 @@ const results = await page.evaluate(() => {
     const context = total.querySelectorAll("p")[1];
     add("total context", context);
     const unowned = [...context.querySelectorAll("span")][0];
-    add("total unowned", unowned);
+    add(
+      "total unowned",
+      [...context.querySelectorAll("span")][0],
+    );
+  }
+
+  // the comparison panel. It appears once two months are on file, which a
+  // single three-month statement is.
+  const comparison = document.querySelector("[data-comparison-panel]");
+  if (comparison) {
+    add("comparison heading", comparison.querySelector("h2"));
+    add(
+      "comparison note",
+      [...comparison.querySelectorAll("p")].find((p) => p.textContent.includes("in both months")),
+    );
+    add(
+      "comparison month label",
+      [...comparison.querySelectorAll("p")].find((p) =>
+        /^[A-Z][a-z]+ \d{4}$/.test(p.textContent.trim()),
+      ),
+    );
+    add("comparison amount", comparison.querySelector("[data-comparison-amount]"));
+    add("comparison delta", comparison.querySelector("[data-comparison-delta]"));
+    const change = comparison.querySelector("[data-change-row]");
+    if (change) {
+      const name = change.querySelector("[data-change-name]");
+      add("comparison change name", name);
+      add("comparison change amounts", name.nextElementSibling);
+      add("comparison change delta", change.querySelector("[data-change-delta]"));
+    }
+    add(
+      "comparison unchanged",
+      [...comparison.querySelectorAll("p")].find((p) => p.textContent.includes("unchanged.")),
+    );
+    add(
+      "comparison strip heading",
+      [...comparison.querySelectorAll("h3")].find((h) => h.textContent.includes("Months on file")),
+    );
+    const strip = comparison.querySelector("[data-comparison-month]");
+    add("comparison strip label", strip?.querySelector("p"));
+    add("comparison strip total", strip?.querySelector("p + p"));
+    add(
+      "comparison footer",
+      [...comparison.querySelectorAll("p")].find((p) =>
+        p.textContent.includes("saved in this browser"),
+      ),
+    );
+    add("comparison forget", comparison.querySelector("[data-forget-history]"));
   }
 
   return samples;

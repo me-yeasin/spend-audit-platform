@@ -114,7 +114,8 @@ Sensitivity — each threshold earns its place:
 | Amount | `$15.49` with `per month` underneath | 13.5 semibold, tabular figures |
 | Expand | chevron | rotates when open |
 
-The monthly amount is the **median** of the payments, so one odd month cannot skew it.
+The monthly amount is the **newest payment** of the charge, so the figure is what the user pays
+now rather than an average over the statement. A price rise is reflected the month it happens.
 The evidence line carries the total, which is what the plan asks this step to show.
 
 **One change from the diagram:** merchant names keep the casing the bank used, rather than
@@ -169,7 +170,7 @@ type RecurringGroup = {
   name: string;         // display name
   occurrences: number;  // payments found
   months: number;       // distinct months
-  monthlyAmount: number; // median payment
+  monthlyAmount: number; // newest payment
   total: number;        // sum of all payments
   varies: boolean;      // amounts drifted
   payments: Transaction[]; // the individual rows
@@ -205,28 +206,31 @@ type RecurringGroup = {
    disappeared, which is wrong. Step 7's design (`design/MONTHLY.md`) puts this to the user as an
    explicit choice: keep the rule and word the comparison honestly, or tolerate a single larger
    step at the end of a series and report it as a price change.
-   A second, quieter consequence of the same rule: the monthly amount is the **median** of the
-   payments, so in a three-payment series the newest price is outvoted by the two older ones.
-   `[15.49, 15.49, 15.95]` reports a monthly amount of `$15.49`. A price rise in the most recent
-   month is therefore invisible in the total unless the comparison compares each charge's most
-   recent payment instead of the median.
+   A second, quieter consequence of the same rule: the monthly amount is the **newest payment** of
+   the charge, so a price rise in the most recent month is reflected at once. `[15.49, 15.49, 15.95]`
+   reports a monthly amount of `$15.95`, not `$15.49`. Under the old median basis the newest price
+   was outvoted by the two older ones, and the headline reported last month's price on the one
+   charge whose price had just moved. See `design/MONTHLY.md` §4.
 
    **Verified working 5 Nov 2026.** Simulating the accumulate-then-analyse flow against the real
    fixtures and the real detector, with a synthetic one-month November statement (the same
-   merchants, paid on the same day of the month, 30 days later):
+   merchants, at the same amounts, paid on the same day of the month, 30 days later):
 
    | History analysed | Charges detected | Monthly total |
    | --- | ---: | ---: |
    | November alone | 0 | — |
    | October + November | 0 | — |
-   | August + September + October + November | **14** | **$2,401.64** |
+   | August + September + October + November | **14** | **$2,404.34** |
 
-   The four-month total is identical to the three-month fixture's $2,401.64, because each charge's
-   monthly amount is the median of its payments and the November payment equals that median. So
-   the monthly re-run produces the same headline number as today's three-month statement, and it
-   produces it from a single month's file — once there is enough history on the machine. The
-   "one month detects nothing" row is the reason the app must keep the months it has already seen
-   rather than read the new file alone; see limit 1.
+   The four-month total is identical to the three-month fixture's $2,404.34, because each charge's
+   monthly amount is its newest payment and the synthetic November repeats the October amounts, so
+   the newest payment is the same in both. The identity is a property of an unchanged month, not of
+   the basis: had the November payment been different, the total would have moved by that
+   difference, which is exactly what the newest-payment basis is for. So the monthly re-run
+   produces the same headline number as today's three-month statement, and it produces it from a
+   single month's file — once there is enough history on the machine. The "one month detects
+   nothing" row is the reason the app must keep the months it has already seen rather than read the
+   new file alone; see limit 1.
 4. **The thresholds are calibrated against synthetic fixtures.** The one-off merchants in our
    fixtures drift by only a few percent, which is *tamer* than real shopping. Real statements
    separate more easily than our test data does, so these numbers should hold — but they are
@@ -241,7 +245,7 @@ type RecurringGroup = {
 - [ ] The five rules, including the three-payment minimum
 - [ ] Panel above the transaction list, list left unchanged
 - [ ] Row anatomy: name, evidence line, cadence chip, monthly amount
-- [ ] Median as the monthly amount
+- [ ] Newest payment as the monthly amount
 - [ ] Expanding a group to reveal its payments
 - [ ] Monthly cadence only for now
 - [ ] The stated limits, especially the 3-month requirement and the 4% drift ceiling
