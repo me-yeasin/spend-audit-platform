@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatBytes } from "@/lib/format";
-import { detectRecurring, type RecurringGroup } from "@/lib/detect-recurring";
 import { parseStatement, type Transaction } from "@/lib/parse-statement";
+import { toStoredPayment, type StoredPayment } from "@/lib/history";
 
 export type ImportPhase = "idle" | "reading" | "ready" | "error";
 
@@ -13,6 +13,17 @@ export type ImportedFile = {
   name: string;
   sizeLabel: string;
   rows: number;
+};
+
+/**
+ * A file that parsed, handed to the workspace so it can be filed as a month.
+ *
+ * The rows are stored, not summarised: the detector needs to see payments of
+ * charges that are not yet known to repeat (design/MONTHLY.md section 3).
+ */
+export type ImportedMonth = {
+  source: string;
+  payments: StoredPayment[];
 };
 
 export type ParseIssue = { reason: string } | null;
@@ -50,7 +61,7 @@ function validateFile(file: File): Problem | null {
   return null;
 }
 
-export function useStatementImport() {
+export function useStatementImport(onImported?: (month: ImportedMonth) => void) {
   const inputRef = useRef<HTMLInputElement>(null);
   const readerRef = useRef<FileReader | null>(null);
   const dragDepth = useRef(0);
@@ -62,7 +73,6 @@ export function useStatementImport() {
   const [imported, setImported] = useState<ImportedFile | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [recurring, setRecurring] = useState<RecurringGroup[]>([]);
   const [skippedRows, setSkippedRows] = useState(0);
   const [parseIssue, setParseIssue] = useState<ParseIssue>(null);
   const [workspace, setWorkspace] = useState(false);
@@ -107,7 +117,6 @@ export function useStatementImport() {
       const finish = () => {
         if (result.status === "ok" || result.status === "empty") {
           setTransactions(result.transactions);
-          setRecurring(detectRecurring(result.transactions).groups);
           setSkippedRows(result.skippedRows);
           setParseIssue(null);
           setImported({
@@ -115,9 +124,14 @@ export function useStatementImport() {
             sizeLabel: formatBytes(file.size),
             rows: result.transactions.length,
           });
+          if (result.transactions.length) {
+            onImported?.({
+              source: file.name,
+              payments: result.transactions.map(toStoredPayment),
+            });
+          }
         } else {
           setTransactions([]);
-          setRecurring([]);
           setSkippedRows(0);
           setParseIssue({ reason: result.reason });
           setImported({ name: file.name, sizeLabel: formatBytes(file.size), rows: 0 });
@@ -142,7 +156,7 @@ export function useStatementImport() {
     };
 
     reader.readAsText(file);
-  }, []);
+  }, [onImported]);
 
   // Dropping a file anywhere on the page should import it, and must never let
   // the browser navigate away to the file.
@@ -197,7 +211,6 @@ export function useStatementImport() {
     setImported(null);
     setProblem(null);
     setTransactions([]);
-    setRecurring([]);
     setSkippedRows(0);
     setParseIssue(null);
     setWorkspace(false);
@@ -215,7 +228,6 @@ export function useStatementImport() {
     imported,
     problem,
     transactions,
-    recurring,
     skippedRows,
     parseIssue,
     workspace,

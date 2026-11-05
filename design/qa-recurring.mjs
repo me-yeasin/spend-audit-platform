@@ -116,6 +116,23 @@ for (const file of ["statement-3-months.csv", "statement-12-months.csv"]) {
   const utility = groups.find((group) => group.key === "CITY POWER WATER");
   check("a drifting bill is still recurring", Boolean(utility));
   check("a drifting bill is flagged as varying", utility?.varies === true);
+  equal("and its amount is the newest payment, not the oldest", utility?.monthlyAmount, 126.1);
+
+  // A bank export is newest-first; a saved history is oldest-first. The answer
+  // must not depend on which one the caller happens to hand over.
+  const reversed = detectRecurring(
+    [...transactions].sort((a, b) => b.date.localeCompare(a.date)),
+  );
+  equal(
+    "the order of the payments does not change the total",
+    reversed.groups.reduce((sum, group) => sum + group.monthlyAmount, 0),
+    groups.reduce((sum, group) => sum + group.monthlyAmount, 0),
+  );
+  equal(
+    "or the amount of a single charge",
+    reversed.groups.find((group) => group.key === "CITY POWER WATER")?.monthlyAmount,
+    utility?.monthlyAmount,
+  );
 
   const netflix = groups.find((group) => group.key === "NETFLIX COM");
   equal("a steady subscription is not flagged as varying", netflix?.varies, false);

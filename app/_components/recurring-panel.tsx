@@ -9,8 +9,10 @@ import OwnerControl from "./owner-control";
 
 type RecurringPanelProps = {
   groups: RecurringGroup[];
-  /** Every transaction in the statement, for the footer line. */
+  /** Every payment on file across the saved months, for the footer line. */
   totalTransactions: number;
+  /** How many calendar months are on file, for the footer line. */
+  monthsOnFile: number;
   /** Names already in use, offered as suggestions. */
   roster: string[];
   /** The owner of a charge, or null when nobody owns it. */
@@ -27,6 +29,7 @@ function slug(key: string) {
 export default function RecurringPanel({
   groups,
   totalTransactions,
+  monthsOnFile,
   roster,
   ownerOf,
   onAssign,
@@ -187,7 +190,8 @@ export default function RecurringPanel({
             >
               <p className="text-[11.5px] text-subtle">
                 {groups.length} recurring {groups.length === 1 ? "charge" : "charges"} grouped
-                from {totalTransactions.toLocaleString()} transactions
+                from {totalTransactions.toLocaleString()} transactions across {monthsOnFile}{" "}
+                saved {monthsOnFile === 1 ? "month" : "months"}
               </p>
               {groups.length > 0 && (
                 <p className="text-[11.5px] text-ink-soft">

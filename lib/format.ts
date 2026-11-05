@@ -57,6 +57,21 @@ export function formatCost(amount: number) {
   return currencyFormatter.format(Math.abs(amount));
 }
 
+/**
+ * "$5.20" read aloud: "5 dollars 20".
+ *
+ * A screen reader meets "$5.20" as "dollar five point two zero" at best, which
+ * is why the change rows and the delta line carry their own spoken sentence
+ * (design/MONTHLY.md section 12).
+ */
+export function formatCostSpoken(amount: number) {
+  const cents = Math.round(Math.abs(amount) * 100);
+  const dollars = Math.floor(cents / 100);
+  const remainder = cents % 100;
+  const spoken = `${dollars} dollar${dollars === 1 ? "" : "s"}`;
+  return remainder ? `${spoken} ${remainder}` : spoken;
+}
+
 export function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;

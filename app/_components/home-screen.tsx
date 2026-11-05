@@ -1,14 +1,29 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import { LockIcon } from "./icons";
-import { useStatementImport } from "./use-statement-import";
+import { useStatementImport, type ImportedMonth } from "./use-statement-import";
 import { useOwners } from "./use-owners";
+import { useHistory } from "./use-history";
 import { unownedGroups } from "@/lib/owners";
 import { summariseRecurring } from "@/lib/total";
 import { formatCost } from "@/lib/format";
+import { detectRecurring, type RecurringGroup } from "@/lib/detect-recurring";
+import {
+  STRIP_MONTHS,
+  allPayments,
+  compareMonths,
+  monthKeyOf,
+  monthLabel,
+  monthsOnFile,
+  paymentsToTransactions,
+  shortMonthLabel,
+  totalForMonth,
+} from "@/lib/history";
 import UploadCard from "./upload-card";
 import FileChip from "./file-chip";
-import TotalPanel from "./total-panel";
+import TotalPanel, { type TotalEmpty } from "./total-panel";
+import ComparisonPanel from "./comparison-panel";
 import FlaggedPanel from "./flagged-panel";
 import RecurringPanel from "./recurring-panel";
 import TransactionsPanel from "./transactions-panel";
@@ -16,16 +31,90 @@ import HowItWorks from "./how-it-works";
 import ResultPreview from "./result-preview";
 
 export default function HomeScreen() {
-  const imp = useStatementImport();
+  const { history, saveMonth, forget } = useHistory();
+
+  // A file that parsed is filed as a month. Everything below is then derived
+  // from the months on file, so the detector runs over the whole history
+  // rather than the file in hand — which is what makes a repeat visible
+  // before the third upload (design/MONTHLY.md section 2).
+  const handleImported = useCallback(
+    (month: ImportedMonth) => {
+      const key = monthKeyOf(month.payments);
+      if (!key) return;
+      saveMonth({
+        month: key,
+        label: monthLabel(key),
+        source: month.source,
+        importedAt: new Date().toISOString(),
+        payments: month.payments,
+      });
+    },
+    [saveMonth],
+  );
+
+  const imp = useStatementImport(handleImported);
   const { owners, roster, ownerOf, setOwner, clearOwner } = useOwners();
   const inWorkspace = imp.workspace;
   const showHero = !inWorkspace;
 
-  const unowned = unownedGroups(imp.recurring, owners);
-  const total = summariseRecurring(imp.recurring, (key) => ownerOf(key) !== null);
+  const unionPayments = useMemo(() => allPayments(history), [history]);
+  const months = useMemo(() => monthsOnFile(history), [history]);
+
+  const allGroups = useMemo<RecurringGroup[]>(() => {
+    if (!unionPayments.length) return [];
+    return detectRecurring(paymentsToTransactions(unionPayments)).groups;
+  }, [unionPayments]);
+
+  const currentMonth = months.length ? months[months.length - 1] : null;
+  const previousMonth = months.length > 1 ? months[months.length - 2] : null;
+
+  // The list and the headline cover the charges still being paid: those with a
+  // payment in the newest month. A charge that has stopped is reported by the
+  // comparison instead, so the list always adds up to the total and the total
+  // is what the user actually pays.
+  const groups = useMemo(
+    () =>
+      currentMonth
+        ? allGroups.filter((group) =>
+            group.payments.some((payment) => payment.date.startsWith(currentMonth)),
+          )
+        : [],
+    [allGroups, currentMonth],
+  );
+
+  const comparison = useMemo(
+    () =>
+      currentMonth && previousMonth
+        ? compareMonths(allGroups, currentMonth, previousMonth)
+        : null,
+    [allGroups, currentMonth, previousMonth],
+  );
+
+  const strip = useMemo(
+    () =>
+      months.slice(-STRIP_MONTHS).map((month) => ({
+        month,
+        label: shortMonthLabel(month),
+        total: totalForMonth(allGroups, month),
+      })),
+    [months, allGroups],
+  );
+
+  const total = summariseRecurring(groups, (key) => ownerOf(key) !== null);
+  const unowned = unownedGroups(groups, owners);
+
+  const emptyState: TotalEmpty | null =
+    groups.length > 0 || imp.parseIssue || imp.transactions.length === 0
+      ? null
+      : months.length === 0
+        ? null
+        : months.length < 3
+          ? { kind: "history", months: months.length, label: currentLabel(months) }
+          : { kind: "nothing" };
 
   // What a screen reader is told, in two sentences: what was loaded, and
-  // what still needs an owner.
+  // what still needs an owner. The comparison is part of the first sentence,
+  // so the headline and the change since last month are never announced apart.
   const loadSummary = !imp.imported
     ? ""
     : imp.parseIssue
@@ -34,12 +123,21 @@ export default function HomeScreen() {
         ? "No transactions found."
         : `${imp.transactions.length.toLocaleString()} transactions loaded, newest first. ${
             total.charges === 0
-              ? "No recurring charges found."
-              : `${total.charges} recurring ${total.charges === 1 ? "charge" : "charges"}, ${formatCost(total.monthly)} per month.`
+              ? months.length < 3
+                ? "No recurring charges yet."
+                : "No recurring charges found."
+              : `${total.charges} recurring ${total.charges === 1 ? "charge" : "charges"} across ${months.length} saved ${months.length === 1 ? "month" : "months"}, ${formatCost(total.monthly)} per month.${
+                  comparison
+                    ? ` ${comparison.delta >= 0 ? "Up" : "Down"} ${formatCost(Math.abs(comparison.delta))} from ${comparison.previousLabel}.`
+                    : ""
+                }`
           }`;
 
+  // Guarded on there being a file in hand: the saved history is read from this
+  // browser, so on its own it would be a sentence the server could not have
+  // rendered, and the page would hydrate mismatched.
   const ownerSummary =
-    imp.recurring.length === 0
+    groups.length === 0 || !imp.imported
       ? ""
       : unowned.length === 0
         ? "Every recurring charge has an owner."
@@ -99,8 +197,19 @@ export default function HomeScreen() {
           {imp.transactions.length > 0 && (
             <>
               <div className="mt-6 w-full sm:mt-8">
-                <TotalPanel total={total} />
+                <TotalPanel total={total} empty={emptyState} />
               </div>
+
+              {comparison && groups.length > 0 && (
+                <div className="mt-6 w-full sm:mt-8">
+                  <ComparisonPanel
+                    comparison={comparison}
+                    strip={strip}
+                    monthsOnFile={months.length}
+                    onForget={forget}
+                  />
+                </div>
+              )}
 
               <div className="mt-6 w-full sm:mt-8">
                 <FlaggedPanel
@@ -113,8 +222,9 @@ export default function HomeScreen() {
 
               <div className="mt-6 w-full sm:mt-8">
                 <RecurringPanel
-                  groups={imp.recurring}
-                  totalTransactions={imp.transactions.length}
+                  groups={groups}
+                  totalTransactions={unionPayments.length}
+                  monthsOnFile={months.length}
                   roster={roster}
                   ownerOf={ownerOf}
                   onAssign={setOwner}
@@ -152,8 +262,19 @@ export default function HomeScreen() {
           {inWorkspace && imp.transactions.length > 0 && (
             <>
               <div className="mt-6 w-full sm:mt-8">
-                <TotalPanel total={total} />
+                <TotalPanel total={total} empty={emptyState} />
               </div>
+
+              {comparison && groups.length > 0 && (
+                <div className="mt-6 w-full sm:mt-8">
+                  <ComparisonPanel
+                    comparison={comparison}
+                    strip={strip}
+                    monthsOnFile={months.length}
+                    onForget={forget}
+                  />
+                </div>
+              )}
 
               <div className="mt-6 w-full sm:mt-8">
                 <FlaggedPanel
@@ -166,8 +287,9 @@ export default function HomeScreen() {
 
               <div className="mt-6 w-full sm:mt-8">
                 <RecurringPanel
-                  groups={imp.recurring}
-                  totalTransactions={imp.transactions.length}
+                  groups={groups}
+                  totalTransactions={unionPayments.length}
+                  monthsOnFile={months.length}
                   roster={roster}
                   ownerOf={ownerOf}
                   onAssign={setOwner}
@@ -208,4 +330,9 @@ export default function HomeScreen() {
       </p>
     </main>
   );
+}
+
+function currentLabel(months: string[]): string {
+  const newest = months[months.length - 1];
+  return newest ? monthLabel(newest) : "";
 }

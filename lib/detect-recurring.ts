@@ -13,7 +13,10 @@
  *                                 land inside that band.
  *   4. Gentle drift only         each payment within 4% of the one before, so a
  *                                 creeping utility bill survives and a shopping
- *                                 swing does not.
+ *                                 swing does not — except that one larger step
+ *                                 is allowed, because a subscription that raises
+ *                                 its price is a price change, not a dead
+ *                                 charge.
  *   5. Present the whole time    present in at least 90% of the months of its
  *                                 own span, so a habit with gaps is rejected
  *                                 while a young subscription is not.
@@ -34,7 +37,7 @@ export type RecurringGroup = {
   occurrences: number;
   /** How many distinct calendar months they cover. */
   months: number;
-  /** The typical payment, taken from the median so one odd month cannot skew it. */
+  /** What the charge costs now — the newest payment, not a median. */
   monthlyAmount: number;
   /** Sum of every payment in the group. */
   total: number;
@@ -141,6 +144,8 @@ type Candidate = {
   medianGap: number;
   gapRegularity: number;
   maxStep: number;
+  /** How many steps between payments were larger than the drift allowance. */
+  largeSteps: number;
 };
 
 function collect(transactions: Transaction[]): Map<string, Candidate> {
@@ -167,6 +172,7 @@ function collect(transactions: Transaction[]): Map<string, Candidate> {
         medianGap: 0,
         gapRegularity: 0,
         maxStep: 0,
+        largeSteps: 0,
       };
       groups.set(key, candidate);
     }
@@ -181,6 +187,10 @@ function collect(transactions: Transaction[]): Map<string, Candidate> {
 
 function measure(candidate: Candidate): Candidate {
   candidate.items.sort((a, b) => a.date.localeCompare(b.date));
+  // The amounts follow the sorted payments, so the newest is always the last
+  // one — whatever order the statement happened to list them in. A bank export
+  // is newest-first; a saved history is oldest-first, and both must agree.
+  candidate.amounts = candidate.items.map((item) => Math.abs(item.amount));
 
   for (let i = 1; i < candidate.items.length; i += 1) {
     candidate.gaps.push(
@@ -195,11 +205,13 @@ function measure(candidate: Candidate): Candidate {
     : 0;
 
   candidate.maxStep = 0;
+  candidate.largeSteps = 0;
   for (let i = 1; i < candidate.amounts.length; i += 1) {
     const previous = candidate.amounts[i - 1];
     if (previous === 0) continue;
     const step = Math.abs(candidate.amounts[i] - previous) / previous;
     if (step > candidate.maxStep) candidate.maxStep = step;
+    if (step > MAX_AMOUNT_STEP) candidate.largeSteps += 1;
   }
 
   const first = candidate.items[0]?.date.slice(0, 7);
@@ -222,8 +234,10 @@ function rejectReason(candidate: Candidate): string | null {
   if (candidate.gapRegularity < MIN_GAP_REGULARITY) {
     return "the gaps between payments are not even";
   }
-  if (candidate.maxStep > MAX_AMOUNT_STEP) {
-    return `the amount changes by ${Math.round(candidate.maxStep * 100)}%`;
+  // One larger step is a price change; two or more is a different thing
+  // wearing the same merchant name.
+  if (candidate.largeSteps > 1) {
+    return `the amount changes by ${Math.round(candidate.maxStep * 100)}% more than once`;
   }
   if (candidate.spanCoverage < MIN_SPAN_COVERAGE) {
     return `missing ${candidate.spanMonths - candidate.months.size} of ${candidate.spanMonths} months`;
@@ -257,7 +271,10 @@ export function detectRecurring(transactions: Transaction[]): RecurringResult {
     }
 
     const amounts = candidate.amounts;
-    const monthlyAmount = median(amounts);
+    // The newest payment, not the median: the total is what the user pays a
+    // month, and a median quietly reports last month's price on the one charge
+    // whose price just moved. See design/MONTHLY.md section 4.
+    const monthlyAmount = amounts[amounts.length - 1];
     const total = amounts.reduce((sum, amount) => sum + amount, 0);
 
     groups.push({

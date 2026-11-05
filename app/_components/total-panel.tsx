@@ -3,8 +3,19 @@
 import { formatCost } from "@/lib/format";
 import type { RecurringTotal } from "@/lib/total";
 
+/**
+ * Why there is nothing to total, when there is nothing.
+ *
+ * The two causes are different and the user needs to know which one they are
+ * looking at: not enough months yet, or enough months and nothing repeats.
+ */
+export type TotalEmpty =
+  | { kind: "history"; months: number; label: string }
+  | { kind: "nothing" };
+
 type TotalPanelProps = {
   total: RecurringTotal;
+  empty?: TotalEmpty | null;
 };
 
 /**
@@ -14,7 +25,7 @@ type TotalPanelProps = {
  * come to every month. It is the sum of the amounts shown in the recurring
  * charges list below it, so the two always agree.
  */
-export default function TotalPanel({ total }: TotalPanelProps) {
+export default function TotalPanel({ total, empty }: TotalPanelProps) {
   const hasCharges = total.charges > 0;
 
   return (
@@ -69,10 +80,16 @@ export default function TotalPanel({ total }: TotalPanelProps) {
                 data-total-amount
                 className="mt-1.5 text-[24px] font-semibold tracking-[-0.01em] text-ink-soft sm:text-[28px]"
               >
-                No recurring charges found
+                {empty?.kind === "nothing"
+                  ? "No recurring charges found"
+                  : "No recurring charges yet"}
               </p>
               <p className="mt-2.5 text-[12px] text-subtle">
-                Nothing repeats in this statement yet, so there is nothing to total.
+                {empty?.kind === "nothing"
+                  ? "Nothing repeats in this history yet, so there is nothing to total."
+                  : empty?.months === 1
+                    ? `One month is not enough to tell a repeat from a one-off. ${empty.label} is saved — two more months and this becomes a number.`
+                    : "Two months are on file. One more month of payments and we can name your recurring charges. Nothing here is wrong."}
               </p>
             </>
           )}
