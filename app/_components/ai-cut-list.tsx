@@ -225,7 +225,7 @@ export default function AiCutList({ groups }: { groups: RecurringGroup[] }) {
               onToggle={(key) =>
                 setOpenMessage((current) => (current === key ? null : key))
               }
-              onCopy={copy}
+              onCopy={(item) => copy(item)}
               onRun={run}
             />
           )}
@@ -623,7 +623,7 @@ function ActionRow({
   open: boolean;
   copied: boolean;
   onToggle: () => void;
-  onCopy: () => void;
+  onCopy: (item: ActionableItem) => void;
 }) {
   const messageId = `ai-cancellation-${index}-${slug(item.group.key) || "charge"}`;
 
@@ -680,7 +680,7 @@ function ActionRow({
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-hairline pt-2.5">
                 <button
                   type="button"
-                  onClick={onCopy}
+                  onClick={() => onCopy(item)}
                   aria-label={`Copy cancellation message for ${item.group.name}`}
                   className="inline-flex items-center gap-1.5 rounded text-[11px] font-semibold text-ink transition-colors hover:text-accent"
                 >

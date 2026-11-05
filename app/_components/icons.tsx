@@ -174,3 +174,83 @@ export function SettingsIcon({ className = "" }: IconProps) {
     </svg>
   );
 }
+
+export function SparkIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      {...base}
+    >
+      <path
+        d="M11.4 3.4c.46 4 2.26 5.8 6.26 6.26-4 .46-5.8 2.26-6.26 6.26-.46-4-2.26-5.8-6.26-6.26 4-.46 5.8-2.26 6.26-6.26Z"
+        fill="currentColor"
+      />
+      <path
+        d="M18.4 14.6c.22 1.95 1.1 2.83 3.05 3.05-1.95.22-2.83 1.1-3.05 3.05-.22-1.95-1.1-2.83-3.05-3.05 1.95-.22 2.83-1.1 3.05-3.05Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function CopyIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      {...base}
+    >
+      <rect
+        x="9"
+        y="9"
+        width="11"
+        height="11"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function CopyIconActive({ className = "" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      {...base}
+    >
+      <rect
+        x="9"
+        y="9"
+        width="11"
+        height="11"
+        rx="2"
+        fill="currentColor"
+        stroke="none"
+      />
+      <path
+        d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
