@@ -9,7 +9,7 @@ import {
   type AiAuditErrorCode,
   type AiAuditItem,
   type AiRecommendation,
-} from "@/lib/ai-audit";
+} from "../../lib/ai-audit";
 import { formatCost } from "@/lib/format";
 import {
   AlertIcon,
@@ -489,9 +489,11 @@ function ResultsState({
   onRun: () => void;
 }) {
   const actionable = audit.items.filter(isActionable);
-  const kept = audit.items.filter((item) => item.recommendation === "keep");
+  const kept = audit.items.filter(
+    (item: AiAuditItem) => item.recommendation === "keep",
+  );
   const unreviewed = audit.items.filter(
-    (item) => item.recommendation === "unreviewed",
+    (item: AiAuditItem) => item.recommendation === "unreviewed",
   );
   const actionableCount = audit.counts.cut + audit.counts.review;
 
@@ -566,7 +568,7 @@ function ResultsState({
 
       {actionable.length > 0 ? (
         <ul className="border-t border-hairline">
-          {actionable.map((item, index) => (
+          {actionable.map((item: ActionableItem, index: number) => (
             <ActionRow
               key={item.group.key}
               item={item}
