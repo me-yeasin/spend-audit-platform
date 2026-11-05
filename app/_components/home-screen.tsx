@@ -26,6 +26,8 @@ import TotalPanel, { type TotalEmpty } from "./total-panel";
 import ComparisonPanel from "./comparison-panel";
 import FlaggedPanel from "./flagged-panel";
 import RecurringPanel from "./recurring-panel";
+import AiCutList from "./ai-cut-list";
+import AiJumpButton from "./ai-jump-button";
 import TransactionsPanel from "./transactions-panel";
 import HowItWorks from "./how-it-works";
 import ResultPreview from "./result-preview";
@@ -88,6 +90,20 @@ export default function HomeScreen() {
         ? compareMonths(allGroups, currentMonth, previousMonth)
         : null,
     [allGroups, currentMonth, previousMonth],
+  );
+
+  // A verdict belongs to the charges it was given. Keying the panel on the
+  // charge set remounts it when a month is added or an amount changes, so an
+  // old audit can never sit next to new data.
+  const aiAuditKey = useMemo(
+    () =>
+      groups
+        .map(
+          (group) =>
+            `${group.key}:${group.occurrences}:${Math.round(group.monthlyAmount * 100)}`,
+        )
+        .join("|"),
+    [groups],
   );
 
   const strip = useMemo(
@@ -231,6 +247,12 @@ export default function HomeScreen() {
                   onClear={clearOwner}
                 />
               </div>
+
+              {groups.length > 0 && (
+                <div className="mt-6 w-full sm:mt-8">
+                  <AiCutList key={aiAuditKey} groups={groups} />
+                </div>
+              )}
             </>
           )}
 
@@ -297,6 +319,12 @@ export default function HomeScreen() {
                 />
               </div>
 
+              {groups.length > 0 && (
+                <div className="mt-6 w-full sm:mt-8">
+                  <AiCutList key={aiAuditKey} groups={groups} />
+                </div>
+              )}
+
               <div className="mt-6 w-full sm:mt-8">
                 <TransactionsPanel
                   transactions={imp.transactions}
@@ -326,8 +354,10 @@ export default function HomeScreen() {
 
       <p className="mt-20 flex items-center justify-center gap-1.5 text-center text-[11px] text-subtle sm:mt-[88px] sm:gap-2 sm:text-[12px]">
         <LockIcon className="shrink-0" />
-        <span>Stays on this device — nothing is uploaded</span>
+        <span>Your statement stays on this device — nothing is uploaded.</span>
       </p>
+
+      {inWorkspace && groups.length > 0 && <AiJumpButton />}
     </main>
   );
 }
