@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { RecurringGroup } from "@/lib/detect-recurring";
+import type { RecurringGroup } from "../../lib/detect-recurring";
 import {
   runAiAudit,
   type AiAudit,
@@ -10,7 +10,7 @@ import {
   type AiAuditItem,
   type AiRecommendation,
 } from "../../lib/ai-audit";
-import { formatCost } from "@/lib/format";
+import { formatCost } from "../../lib/format";
 import {
   AlertIcon,
   CheckIcon,

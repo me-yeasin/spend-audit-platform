@@ -5,10 +5,10 @@ import { LockIcon } from "./icons";
 import { useStatementImport, type ImportedMonth } from "./use-statement-import";
 import { useOwners } from "./use-owners";
 import { useHistory } from "./use-history";
-import { unownedGroups } from "@/lib/owners";
-import { summariseRecurring } from "@/lib/total";
-import { formatCost } from "@/lib/format";
-import { detectRecurring, type RecurringGroup } from "@/lib/detect-recurring";
+import { unownedGroups } from "../../lib/owners";
+import { summariseRecurring } from "../../lib/total";
+import { formatCost } from "../../lib/format";
+import { detectRecurring, type RecurringGroup } from "../../lib/detect-recurring";
 import {
   STRIP_MONTHS,
   allPayments,
@@ -19,7 +19,7 @@ import {
   paymentsToTransactions,
   shortMonthLabel,
   totalForMonth,
-} from "@/lib/history";
+} from "../../lib/history";
 import UploadCard from "./upload-card";
 import FileChip from "./file-chip";
 import TotalPanel, { type TotalEmpty } from "./total-panel";
