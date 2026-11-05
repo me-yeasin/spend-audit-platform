@@ -1,16 +1,12 @@
 import Link from "next/link";
 import HomeScreen from "./_components/home-screen";
 import SiteFooter from "./_components/site-footer";
+import BrandMark from "./_components/brand-mark";
 
 function Wordmark() {
   return (
     <span className="flex items-center gap-2.5 sm:gap-3">
-      <span
-        className="grid size-6 place-items-center rounded-[8px] bg-accent text-[13px] font-semibold leading-none text-white sm:size-[26px]"
-        aria-hidden="true"
-      >
-        S
-      </span>
+      <BrandMark className="size-6 shrink-0 sm:size-[26px]" />
       <span className="text-[14px] font-semibold tracking-[-0.01em] text-ink sm:text-[15px]">
         Spend Audit
       </span>
