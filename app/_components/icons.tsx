@@ -152,3 +152,25 @@ export function AlertIcon({ className = "" }: IconProps) {
     </svg>
   );
 }
+
+export function SettingsIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      className={className}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      {...base}
+    >
+      <path
+        d="M3.5 8h7M15.5 8h5M3.5 16h3M11.5 16h9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <circle cx="13" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="9" cy="16" r="2.2" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
