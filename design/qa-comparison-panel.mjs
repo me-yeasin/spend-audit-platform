@@ -200,6 +200,20 @@ check("nothing overflows the page", narrow.overflow, 0);
 check("the strip keeps three months", narrow.months.length, 3);
 await mobile.screenshot({ path: path.join(outDir, "qa-comparison-mobile.png"), fullPage: true });
 
+// ------------------------------------------- one file holding three months
+// A bank statement usually covers several months in one upload. That path
+// lists its payments newest-first, so it is the one that caught the detector
+// reading the oldest payment as the newest — it gets its own check.
+await page.evaluate(() => localStorage.clear());
+await page.reload({ waitUntil: "networkidle0" });
+await drop(page, "statement-3-months.csv");
+const single = await read(page);
+console.log("\n--- one file holding three months ---");
+check("the headline is what the newest month cost", single.amount, "$2,404.34");
+check("all three months are on file", single.months.length, 3);
+check("and the newest of them is the headline", single.months[2]?.text.includes(single.amount), true);
+check("and it is compared with the month before", single.comparisonAmount, "$2,404.34");
+
 await page.screenshot({ path: path.join(outDir, "qa-comparison-forget.png"), fullPage: true });
 
 await browser.close();
