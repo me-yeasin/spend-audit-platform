@@ -210,6 +210,23 @@ type RecurringGroup = {
    `[15.49, 15.49, 15.95]` reports a monthly amount of `$15.49`. A price rise in the most recent
    month is therefore invisible in the total unless the comparison compares each charge's most
    recent payment instead of the median.
+
+   **Verified working 5 Nov 2026.** Simulating the accumulate-then-analyse flow against the real
+   fixtures and the real detector, with a synthetic one-month November statement (the same
+   merchants, paid on the same day of the month, 30 days later):
+
+   | History analysed | Charges detected | Monthly total |
+   | --- | ---: | ---: |
+   | November alone | 0 | — |
+   | October + November | 0 | — |
+   | August + September + October + November | **14** | **$2,401.64** |
+
+   The four-month total is identical to the three-month fixture's $2,401.64, because each charge's
+   monthly amount is the median of its payments and the November payment equals that median. So
+   the monthly re-run produces the same headline number as today's three-month statement, and it
+   produces it from a single month's file — once there is enough history on the machine. The
+   "one month detects nothing" row is the reason the app must keep the months it has already seen
+   rather than read the new file alone; see limit 1.
 4. **The thresholds are calibrated against synthetic fixtures.** The one-off merchants in our
    fixtures drift by only a few percent, which is *tamer* than real shopping. Real statements
    separate more easily than our test data does, so these numbers should hold — but they are
