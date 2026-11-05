@@ -183,6 +183,13 @@ type RecurringGroup = {
 1. **Three months of history are needed.** A brand-new subscription with one or two payments is
    not detected yet. This is a deliberate trade: two charges cannot be told apart from
    coincidence. Plaid asks for 180 days for the same reason.
+   **Verified 5 Nov 2026** against the real detector: a one-month statement (one payment per
+   merchant) detects **0** recurring charges, and a two-month statement (two payments per
+   merchant) also detects **0**. The minimum is three *payments*, so a statement must span at
+   least three months before the recurring list can appear at all. This is the fact that shapes
+   step 7: the monthly re-run cannot work by reading the new file alone, because a single
+   month's statement never contains enough repetition. The app has to keep the months it has
+   already seen and analyse them together. See `design/MONTHLY.md`.
 2. **Only monthly cadence is recognised.** Weekly subscriptions (a gym, a coffee plan) and annual
    ones (insurance, domain renewals) are not detected in this step. Rule 3 can be widened later
    once the monthly path is proven.
@@ -190,6 +197,19 @@ type RecurringGroup = {
    $15 is a 19% step and would be missed. We would rather show 13 charges than 14 where one is
    wrong, per the "no false positives" choice — and this is the first rule to revisit if it
    proves too strict in real statements.
+   **Verified 5 Nov 2026** while designing the monthly re-run (step 7): a series of
+   `$15.49, $15.49, $17.99` is rejected outright — it does not appear as a recurring charge at
+   all, it lands in the detector's `rejected` list. A `$15.49, $15.49, $15.95` series (a 3% step)
+   *is* accepted. This matters beyond step 3: in a month-over-month comparison the commonest
+   real change — a subscription raising its price — would be reported as the charge having
+   disappeared, which is wrong. Step 7's design (`design/MONTHLY.md`) puts this to the user as an
+   explicit choice: keep the rule and word the comparison honestly, or tolerate a single larger
+   step at the end of a series and report it as a price change.
+   A second, quieter consequence of the same rule: the monthly amount is the **median** of the
+   payments, so in a three-payment series the newest price is outvoted by the two older ones.
+   `[15.49, 15.49, 15.95]` reports a monthly amount of `$15.49`. A price rise in the most recent
+   month is therefore invisible in the total unless the comparison compares each charge's most
+   recent payment instead of the median.
 4. **The thresholds are calibrated against synthetic fixtures.** The one-off merchants in our
    fixtures drift by only a few percent, which is *tamer* than real shopping. Real statements
    separate more easily than our test data does, so these numbers should hold — but they are
